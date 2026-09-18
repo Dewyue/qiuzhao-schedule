@@ -2,12 +2,14 @@ import { useRef, useState } from "react";
 import { downloadEventsJson, parseEventList } from "../lib/storage";
 import type { RecruitEvent } from "../types";
 
-export function DataActions({
+export function DataPanel({
   events,
   onImport,
+  onLoadSample,
 }: {
   events: RecruitEvent[];
   onImport: (events: RecruitEvent[]) => void;
+  onLoadSample: () => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -27,24 +29,36 @@ export function DataActions({
   }
 
   return (
-    <div className="flex flex-col items-start gap-2 sm:items-end">
-      <div className="flex flex-wrap items-center gap-2">
+    <section className="mx-auto flex w-full max-w-[480px] flex-col gap-6">
+      <div>
+        <h2 className="text-[20px] font-semibold tracking-[-0.03em]">数据管理</h2>
+        <p className="mt-1 text-[14px] leading-relaxed text-muted">
+          日程只存在这台浏览器。换设备或清站点数据前先导出 JSON。
+        </p>
+      </div>
+
+      <div className="rounded-[20px] bg-surface-muted px-5 py-4">
+        <p className="text-[13px] text-muted">本机已存</p>
+        <p className="mt-1 text-[28px] font-semibold tracking-[-0.04em]">{events.length} 场</p>
+      </div>
+
+      <div className="flex flex-col gap-3">
         <button
           type="button"
           onClick={() => {
             downloadEventsJson(events);
             setMessage("已下载 JSON，日程仍留在这台浏览器里");
           }}
-          className="h-9 rounded-[11px] bg-surface-muted px-3.5 text-[13px] font-medium hover:bg-[#ececf0]"
+          className="h-11 rounded-[12px] bg-accent text-[15px] font-medium text-white hover:bg-accent-hover"
         >
           导出 JSON
         </button>
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
-          className="h-9 rounded-[11px] px-3.5 text-[13px] font-medium text-accent hover:underline"
+          className="h-11 rounded-[12px] bg-surface-muted text-[15px] font-medium"
         >
-          导入
+          导入 JSON
         </button>
         <input
           ref={inputRef}
@@ -57,10 +71,21 @@ export function DataActions({
             if (file) onFile(file);
           }}
         />
+        {events.length === 0 ? (
+          <button
+            type="button"
+            onClick={() => {
+              onLoadSample();
+              setMessage("已载入示例，可在日程页查看占用与重合");
+            }}
+            className="h-11 text-[14px] text-accent hover:underline"
+          >
+            载入示例日程
+          </button>
+        ) : null}
       </div>
-      <p className="text-[12px] text-muted">
-        {message ?? "增改会立刻写入本机，换设备请先导出 JSON"}
-      </p>
-    </div>
+
+      {message ? <p className="text-[13px] text-muted">{message}</p> : null}
+    </section>
   );
 }

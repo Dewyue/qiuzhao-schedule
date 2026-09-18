@@ -1,16 +1,12 @@
 import type { FormEvent } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { TYPE_LABEL, toDatetimeLocal } from "../lib/time";
 import type { EventType, RecruitEvent } from "../types";
-import { TYPE_LABEL } from "../lib/time";
 
-const empty: Omit<RecruitEvent, "id"> = {
-  company: "",
-  type: "interview",
-  title: "",
-  start: "",
-  end: "",
-  location: "",
-  notes: "",
-};
+const ROUNDS = ["一面", "二面"] as const;
+const DURATION_MINUTES = Array.from({ length: 24 }, (_, i) => (i + 1) * 10);
+
+type Draft = Omit<RecruitEvent, "id">;
 
 export function EventForm({
   draft,
@@ -19,65 +15,105 @@ export function EventForm({
   onCancel,
   onDelete,
 }: {
-  draft: Omit<RecruitEvent, "id">;
+  draft: Draft;
   editing: RecruitEvent | null;
-  onSave: (data: Omit<RecruitEvent, "id">) => void;
+  onSave: (data: Draft) => void;
   onCancel: () => void;
   onDelete?: () => void;
 }) {
-  const value = editing ?? { ...empty, ...draft };
+  const source = editing ?? draft;
+  const [company, setCompany] = useState(source.company);
+  const [type, setType] = useState<EventType>(source.type);
+  const [title, setTitle] = useState(source.title);
+  const [start, setStart] = useState(source.start ? toDatetimeLocal(new Date(source.start)) : "");
+  const [end, setEnd] = useState(source.end ? toDatetimeLocal(new Date(source.end)) : "");
+  const [location, setLocation] = useState(source.location ?? "");
+  const [notes, setNotes] = useState(source.notes ?? "");
+  const [duration, setDuration] = useState(minutesBetween(source.start, source.end));
+
+  useEffect(() => {
+    const next = editing ?? draft;
+    setCompany(next.company);
+    setType(next.type);
+    setTitle(next.title);
+    setStart(next.start ? toDatetimeLocal(new Date(next.start)) : "");
+    setEnd(next.end ? toDatetimeLocal(new Date(next.end)) : "");
+    setLocation(next.location ?? "");
+    setNotes(next.notes ?? "");
+    setDuration(minutesBetween(next.start, next.end));
+  }, [editing, draft]);
+
+  const durationOptions = useMemo(() => {
+    if (duration && !DURATION_MINUTES.includes(duration)) {
+      return [...DURATION_MINUTES, duration].sort((a, b) => a - b);
+    }
+    return DURATION_MINUTES;
+  }, [duration]);
+
+  function applyDuration(mins: number, startLocal: string) {
+    setDuration(mins);
+    if (!startLocal || !mins) {
+      setEnd("");
+      return;
+    }
+    const s = new Date(startLocal);
+    if (Number.isNaN(s.getTime())) return;
+    setEnd(toDatetimeLocal(new Date(s.getTime() + mins * 60_000)));
+  }
+
+  function handleStartChange(value: string) {
+    setStart(value);
+    if (duration) applyDuration(duration, value);
+  }
 
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const form = new FormData(e.currentTarget);
-    const company = String(form.get("company") ?? "").trim();
-    const startLocal = String(form.get("start") ?? "");
-    const endLocal = String(form.get("end") ?? "");
-    if (!company || !startLocal || !endLocal) return;
-    const start = new Date(startLocal);
-    const end = new Date(endLocal);
-    if (!(end.getTime() > start.getTime())) return;
+    if (!company.trim() || !start || !end) return;
+    if (type === "interview" && !title) return;
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+    if (!(endDate.getTime() > startDate.getTime())) return;
     onSave({
-      company,
-      type: String(form.get("type") ?? "interview") as EventType,
-      title: String(form.get("title") ?? "").trim(),
-      start: start.toISOString(),
-      end: end.toISOString(),
-      location: String(form.get("location") ?? "").trim() || undefined,
-      notes: String(form.get("notes") ?? "").trim() || undefined,
+      company: company.trim(),
+      type,
+      title: type === "interview" ? title : "",
+      start: startDate.toISOString(),
+      end: endDate.toISOString(),
+      location: type === "exam" ? undefined : location.trim() || undefined,
+      notes: notes.trim() || undefined,
     });
   }
 
-  const startVal = value.start ? toLocal(value.start) : "";
-  const endVal = value.end ? toLocal(value.end) : "";
-
   return (
-    <form key={editing?.id ?? `${startVal}-${endVal}`} onSubmit={handleSubmit} className="flex flex-col gap-4">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
       <div>
-        <p className="text-[13px] font-medium text-accent">
-          {editing ? "编辑日程" : "快速记录"}
-        </p>
-        <h2 className="mt-1 text-[22px] font-semibold tracking-[-0.03em]">
-          {editing ? editing.company : "新的一场"}
+        <p className="text-[13px] font-medium text-accent">{editing ? "编辑日程" : "新的一场"}</p>
+        <h2 className="mt-0.5 text-[20px] font-semibold tracking-[-0.03em]">
+          {editing ? editing.company || "编辑" : "填写后记下"}
         </h2>
       </div>
 
-      <label className="flex flex-col gap-1.5">
+      <label className="flex flex-col gap-1">
         <span className="text-[13px] text-muted">公司</span>
         <input
-          name="company"
           required
-          defaultValue={value.company}
+          value={company}
+          onChange={(e) => setCompany(e.target.value)}
           placeholder="公司名称"
           className="h-11 rounded-[12px] bg-surface px-3 text-[15px] outline-none"
         />
       </label>
 
-      <label className="flex flex-col gap-1.5">
+      <label className="flex flex-col gap-1">
         <span className="text-[13px] text-muted">类型</span>
         <select
-          name="type"
-          defaultValue={value.type}
+          value={type}
+          onChange={(e) => {
+            const next = e.target.value as EventType;
+            setType(next);
+            if (next !== "interview") setTitle("");
+            if (next === "exam") setLocation("");
+          }}
           className="h-11 rounded-[12px] bg-surface px-3 text-[15px] outline-none"
         >
           {(Object.keys(TYPE_LABEL) as EventType[]).map((t) => (
@@ -88,56 +124,88 @@ export function EventForm({
         </select>
       </label>
 
-      <label className="flex flex-col gap-1.5">
-        <span className="text-[13px] text-muted">场次</span>
+      {type === "interview" ? (
+        <fieldset className="flex flex-col gap-1">
+          <legend className="text-[13px] text-muted">场次</legend>
+          <div className="flex gap-2">
+            {ROUNDS.map((round) => (
+              <button
+                key={round}
+                type="button"
+                onClick={() => setTitle(round)}
+                className={
+                  title === round
+                    ? "h-10 flex-1 rounded-[12px] bg-accent text-[14px] font-medium text-white"
+                    : "h-10 flex-1 rounded-[12px] bg-surface text-[14px] font-medium text-foreground"
+                }
+              >
+                {round}
+              </button>
+            ))}
+          </div>
+        </fieldset>
+      ) : null}
+
+      <label className="flex flex-col gap-1">
+        <span className="text-[13px] text-muted">开始</span>
         <input
-          name="title"
-          defaultValue={value.title}
-          placeholder="一面 / 性格测评"
+          type="datetime-local"
+          required
+          value={start}
+          onChange={(e) => handleStartChange(e.target.value)}
           className="h-11 rounded-[12px] bg-surface px-3 text-[15px] outline-none"
         />
       </label>
 
-      <div className="grid grid-cols-1 gap-3">
-        <label className="flex flex-col gap-1.5">
-          <span className="text-[13px] text-muted">开始</span>
-          <input
-            name="start"
-            type="datetime-local"
-            required
-            defaultValue={startVal}
-            className="h-11 rounded-[12px] bg-surface px-3 text-[15px] outline-none"
-          />
-        </label>
-        <label className="flex flex-col gap-1.5">
-          <span className="text-[13px] text-muted">结束</span>
-          <input
-            name="end"
-            type="datetime-local"
-            required
-            defaultValue={endVal}
-            className="h-11 rounded-[12px] bg-surface px-3 text-[15px] outline-none"
-          />
-        </label>
-      </div>
+      <label className="flex flex-col gap-1">
+        <span className="text-[13px] text-muted">时长</span>
+        <select
+          value={duration || ""}
+          onChange={(e) => applyDuration(Number(e.target.value), start)}
+          className="h-11 rounded-[12px] bg-surface px-3 text-[15px] outline-none"
+        >
+          <option value="">先选时长</option>
+          {durationOptions.map((mins) => (
+            <option key={mins} value={mins}>
+              {labelDuration(mins)}
+            </option>
+          ))}
+        </select>
+      </label>
 
-      <label className="flex flex-col gap-1.5">
-        <span className="text-[13px] text-muted">链接或地点</span>
+      <label className="flex flex-col gap-1">
+        <span className="text-[13px] text-muted">结束</span>
         <input
-          name="location"
-          defaultValue={value.location ?? ""}
-          placeholder="会议链接 / 机房"
+          type="datetime-local"
+          value={end}
+          onChange={(e) => {
+            setEnd(e.target.value);
+            setDuration(minutesBetween(start, e.target.value));
+          }}
+          placeholder="由时长填入"
           className="h-11 rounded-[12px] bg-surface px-3 text-[15px] outline-none"
         />
       </label>
 
-      <label className="flex flex-col gap-1.5">
+      {type !== "exam" ? (
+        <label className="flex flex-col gap-1">
+          <span className="text-[13px] text-muted">链接或地点</span>
+          <input
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+            placeholder="会议链接 / 机房"
+            className="h-11 rounded-[12px] bg-surface px-3 text-[15px] outline-none"
+          />
+        </label>
+      ) : null}
+
+      <label className="flex flex-col gap-1">
         <span className="text-[13px] text-muted">备注</span>
-        <textarea
-          name="notes"
-          rows={3}
-          defaultValue={value.notes ?? ""}
-          className="resize-none rounded-[12px] bg-surface px-3 py-2.5 text-[15px] outline-none"
+        <input
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="可选"
+          className="h-9 rounded-[12px] bg-surface px-3 text-[14px] outline-none"
         />
       </label>
 
@@ -171,9 +239,19 @@ export function EventForm({
   );
 }
 
-function toLocal(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso.length >= 16 ? iso.slice(0, 16) : "";
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+function minutesBetween(startIso: string, endIso: string): number {
+  if (!startIso || !endIso) return 0;
+  const start = new Date(startIso);
+  const end = new Date(endIso);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return 0;
+  const mins = Math.round((end.getTime() - start.getTime()) / 60_000);
+  return mins > 0 ? mins : 0;
+}
+
+function labelDuration(mins: number): string {
+  if (mins < 60) return `${mins} 分钟`;
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  if (m === 0) return `${h} 小时`;
+  return `${h} 小时 ${m} 分`;
 }

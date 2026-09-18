@@ -12,9 +12,9 @@ import {
 import { DayColumn } from "./DayColumn";
 
 const HOUR_HEIGHT: Record<RangeMode, number> = {
-  today: 56,
-  upcoming: 44,
-  week: 34,
+  today: 64,
+  upcoming: 50,
+  week: 40,
 };
 
 export function OccupancyBoard({
