@@ -147,8 +147,13 @@ export default function App() {
         {tab === "data" ? (
           <DataPanel
             events={events}
+            now={now}
             onImport={replace}
             onLoadSample={() => replace(sampleEvents())}
+            onView={(event) => {
+              setMenuEvent(null);
+              setViewing(event);
+            }}
           />
         ) : null}
       </div>

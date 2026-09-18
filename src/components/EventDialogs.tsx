@@ -24,6 +24,7 @@ export function EventDetail({
           {event.company}
         </h2>
         <p className="mt-3 text-[15px] tabular-nums text-muted">
+          {new Date(event.start).getMonth() + 1}月{new Date(event.start).getDate()}日{" "}
           {formatHM(new Date(event.start))}–{formatHM(new Date(event.end))}
         </p>
         {event.location ? <p className="mt-2 text-[15px]">{event.location}</p> : null}

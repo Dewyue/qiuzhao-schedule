@@ -55,6 +55,40 @@ export function formatHM(d: Date): string {
   return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+export function formatMD(d: Date): string {
+  return `${d.getMonth() + 1}月${d.getDate()}日`;
+}
+
+export function formatYMD(d: Date): string {
+  return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
+}
+
+export type EventStatus = "done" | "live" | "upcoming";
+
+export function eventStatus(event: RecruitEvent, now = new Date()): EventStatus {
+  const start = new Date(event.start).getTime();
+  const end = new Date(event.end).getTime();
+  const t = now.getTime();
+  if (end <= t) return "done";
+  if (start <= t) return "live";
+  return "upcoming";
+}
+
+export function eventTouchesDay(event: RecruitEvent, day: Date): boolean {
+  return sliceEventOnDay(event, day) !== null;
+}
+
+export function monthGrid(year: number, month: number): (Date | null)[] {
+  const first = new Date(year, month, 1);
+  const padLeft = (first.getDay() + 6) % 7;
+  const days = new Date(year, month + 1, 0).getDate();
+  const cells: (Date | null)[] = [];
+  for (let i = 0; i < padLeft; i++) cells.push(null);
+  for (let d = 1; d <= days; d++) cells.push(new Date(year, month, d));
+  while (cells.length % 7 !== 0) cells.push(null);
+  return cells;
+}
+
 export function formatDuration(minutes: number): string {
   if (minutes < 60) return `${minutes}分`;
   const h = Math.floor(minutes / 60);
