@@ -9,13 +9,11 @@ export function DataPanel({
   events,
   now,
   onImport,
-  onLoadSample,
   onView,
 }: {
   events: RecruitEvent[];
   now: Date;
   onImport: (events: RecruitEvent[]) => void;
-  onLoadSample: () => void;
   onView: (event: RecruitEvent) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -117,29 +115,6 @@ export function DataPanel({
             if (file) onFile(file);
           }}
         />
-        {events.length === 0 ? (
-          <button
-            type="button"
-            onClick={() => {
-              onLoadSample();
-              setMessage("已载入这份初始日程");
-            }}
-            className="mt-3 text-[14px] text-accent hover:underline"
-          >
-            载入初始日程
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={() => {
-              onLoadSample();
-              setMessage("已换成这份初始日程（本机原数据被替换）");
-            }}
-            className="mt-3 text-[14px] text-muted hover:text-accent hover:underline"
-          >
-            换成这份初始日程
-          </button>
-        )}
         {message ? <p className="mt-3 text-[13px] text-muted">{message}</p> : null}
       </div>
     </section>

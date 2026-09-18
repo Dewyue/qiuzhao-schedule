@@ -6,7 +6,7 @@ import { EventDetail, EventMenu } from "./components/EventDialogs";
 import { EventForm } from "./components/EventForm";
 import { OccupancyBoard, RangeSummary } from "./components/OccupancyBoard";
 import { RangeSwitch } from "./components/RangeSwitch";
-import { addDays, sampleEvents, startOfDay } from "./lib/time";
+import { addDays, startOfDay } from "./lib/time";
 import { useEvents } from "./state/EventsContext";
 import type { FreeSlot, RangeMode, RecruitEvent } from "./types";
 
@@ -165,7 +165,6 @@ export default function App() {
             events={events}
             now={now}
             onImport={replace}
-            onLoadSample={() => replace(sampleEvents())}
             onView={(event) => {
               setMenuEvent(null);
               setViewing(event);

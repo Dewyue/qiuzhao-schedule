@@ -7,7 +7,6 @@ import {
   type ReactNode,
 } from "react";
 import { loadEvents, saveEvents } from "../lib/storage";
-import { isLegacyPlaceholder, sampleEvents } from "../lib/time";
 import type { RecruitEvent } from "../types";
 
 type State = { events: RecruitEvent[] };
@@ -86,10 +85,12 @@ export function EventsProvider({ children }: { children: ReactNode }) {
 
 function bootstrapEvents(): RecruitEvent[] {
   const loaded = loadEvents();
-  if (!isLegacyPlaceholder(loaded) && loaded.length > 0) return loaded;
-  const seed = sampleEvents();
-  saveEvents(seed);
-  return seed;
+  const kept = loaded.filter((e) => {
+    const id = String(e.id);
+    return !id.startsWith("init-") && !id.startsWith("sample-");
+  });
+  if (kept.length !== loaded.length) saveEvents(kept);
+  return kept;
 }
 
 export function useEvents(): Ctx {
