@@ -80,12 +80,26 @@ export default function App() {
 
   return (
     <div className="min-h-dvh bg-surface text-foreground">
-      <div className="mx-auto flex max-w-[1400px] flex-col gap-4 px-5 pb-24 pt-4 lg:px-8">
+      <div
+        className={
+          tab === "schedule"
+            ? "flex w-full flex-col gap-3 px-2 pb-24 pt-3"
+            : "mx-auto flex max-w-[1400px] flex-col gap-4 px-5 pb-24 pt-4 lg:px-8"
+        }
+      >
         {tab === "schedule" ? (
           <>
             <header className="flex items-center justify-between gap-3">
               <h1 className="text-[18px] font-semibold tracking-[-0.03em]">秋招日程</h1>
-              <RangeSwitch value={mode} onChange={setMode} />
+              <RangeSwitch
+                value={mode}
+                onChange={(next) => {
+                  setMode(next);
+                  const today = startOfDay(new Date());
+                  if (next === "today") setSelectedDay(today);
+                  if (next === "tomorrow") setSelectedDay(addDays(today, 1));
+                }}
+              />
             </header>
             <RangeSummary events={events} mode={mode} now={now} />
             <OccupancyBoard
@@ -98,7 +112,7 @@ export default function App() {
               onSelectFree={onSelectFree}
               onPickTime={onPickTime}
             />
-            {mode === "today" ? (
+            {mode === "today" || mode === "tomorrow" ? (
               <div className="mt-2">
                 <p className="mb-2 text-[13px] font-medium text-muted">当日列表</p>
                 <DayDetailList

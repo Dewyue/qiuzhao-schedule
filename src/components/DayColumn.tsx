@@ -9,6 +9,7 @@ import {
   mergeBusy,
   TYPE_LABEL,
   weekdayLabel,
+  weekdayShort,
 } from "../lib/time";
 
 const TYPE_CLASS: Record<RecruitEvent["type"], string> = {
@@ -31,6 +32,7 @@ export function DayColumn({
   mode,
   now,
   selected,
+  headerHeight,
   onViewEvent,
   onEventMenu,
   onSelectFree,
@@ -47,6 +49,7 @@ export function DayColumn({
   mode: RangeMode;
   now: Date;
   selected: boolean;
+  headerHeight: number;
   onViewEvent: (event: RecruitEvent) => void;
   onEventMenu: (event: RecruitEvent) => void;
   onSelectFree: (slot: FreeSlot) => void;
@@ -91,30 +94,50 @@ export function DayColumn({
 
   return (
     <section className="flex min-w-0 flex-1 flex-col">
-      <header className="flex h-[72px] items-end gap-3 px-0.5 pb-2">
-        <div>
-          <p className="text-[12px] font-medium text-muted">
-            {weekdayLabel(day)}
-            {isToday ? " · 今天" : ""}
-          </p>
-          <p
-            className={
-              selected
-                ? "text-[28px] font-semibold tracking-[-0.04em] text-accent"
-                : "text-[28px] font-semibold tracking-[-0.04em]"
-            }
-          >
-            {day.getDate()}
-          </p>
-        </div>
-        {conflicts ? (
-          <span className="mb-1.5 text-[12px] font-medium text-danger">撞车</span>
+      <header
+        className={`flex items-end px-0.5 pb-1.5 ${compact ? "justify-center" : "gap-2"}`}
+        style={{ height: headerHeight }}
+      >
+        {compact ? (
+          <div className="text-center">
+            <p className="text-[10px] font-medium text-muted">{weekdayShort(day)}</p>
+            <p
+              className={
+                selected
+                  ? "text-[15px] font-semibold tracking-[-0.03em] text-accent"
+                  : "text-[15px] font-semibold tracking-[-0.03em]"
+              }
+            >
+              {day.getDate()}
+            </p>
+          </div>
         ) : (
-          <span className="mb-1.5 text-[12px] text-muted">{Math.round(fill * 100)}% 占用</span>
+          <>
+            <div>
+              <p className="text-[12px] font-medium text-muted">
+                {weekdayLabel(day)}
+                {isToday ? " · 今天" : ""}
+              </p>
+              <p
+                className={
+                  selected
+                    ? "text-[28px] font-semibold tracking-[-0.04em] text-accent"
+                    : "text-[28px] font-semibold tracking-[-0.04em]"
+                }
+              >
+                {day.getDate()}
+              </p>
+            </div>
+            {conflicts ? (
+              <span className="mb-1 text-[12px] font-medium text-danger">撞车</span>
+            ) : (
+              <span className="mb-1 text-[12px] text-muted">{Math.round(fill * 100)}% 占用</span>
+            )}
+          </>
         )}
       </header>
 
-      <div className="mb-3 h-1 overflow-hidden rounded-full bg-border">
+      <div className={`mb-3 overflow-hidden rounded-full bg-border ${compact ? "h-0.5" : "h-1"}`}>
         <div
           className={`h-full rounded-full ${conflicts ? "bg-danger" : "bg-accent"}`}
           style={{ width: `${Math.max(fill * 100, fill > 0 ? 4 : 0)}%` }}
@@ -122,18 +145,19 @@ export function DayColumn({
       </div>
 
       <div
-        className="relative cursor-pointer rounded-[20px] bg-surface-muted"
+        className={`relative cursor-pointer bg-surface-muted ${compact ? "rounded-[10px]" : "rounded-[20px]"}`}
         style={{ height }}
         onClick={onBgClick}
         role="presentation"
       >
         {pending.length > 0 ? (
-          <div className="absolute top-2 right-2 left-2 z-[3] flex flex-wrap gap-1">
+          <div className={`absolute top-1.5 right-1 left-1 z-[3] flex flex-wrap ${compact ? "justify-center gap-0.5" : "gap-1"}`}>
             {pending.map((event) => (
               <button
                 key={event.id}
                 type="button"
                 data-block
+                aria-label={`${event.company} 时间待定`}
                 onClick={(e) => {
                   e.stopPropagation();
                   onViewEvent(event);
@@ -142,9 +166,13 @@ export function DayColumn({
                   e.preventDefault();
                   onEventMenu(event);
                 }}
-                className="rounded-[8px] bg-white px-1.5 py-0.5 text-[11px] font-medium text-accent shadow-sm"
+                className={
+                  compact
+                    ? "size-2 rounded-full bg-accent"
+                    : "rounded-[8px] bg-white px-1.5 py-0.5 text-[11px] font-medium text-accent shadow-sm"
+                }
               >
-                {event.company} · 待定
+                {compact ? null : `${event.company} · 待定`}
               </button>
             ))}
           </div>
@@ -174,8 +202,8 @@ export function DayColumn({
               style={{
                 top: top + 2,
                 height: h - 4,
-                left: 6,
-                right: 6,
+                left: compact ? 2 : 6,
+                right: compact ? 2 : 6,
               }}
             >
               <span className={`font-medium ${compact ? "text-[11px]" : "text-[12px]"}`}>
@@ -206,7 +234,7 @@ export function DayColumn({
           );
         })}
 
-        {layoutPins(pins, topOf, height).map((item) => (
+        {layoutPins(pins, topOf, height, compact).map((item) => (
           <AxisPin
             key={item.event.id}
             event={item.event}
@@ -227,7 +255,7 @@ export function DayColumn({
           </div>
         ) : null}
 
-        {slices.length === 0 && labeled.length === 0 && pins.length === 0 && pending.length === 0 ? (
+        {slices.length === 0 && labeled.length === 0 && pins.length === 0 && pending.length === 0 && !compact ? (
           <p className="pointer-events-none absolute inset-0 flex items-center justify-center text-[13px] text-muted">
             全天空闲
           </p>
@@ -243,6 +271,7 @@ function EventChip({
   height,
   widthPct,
   dense,
+  compact,
   showTime,
   onView,
   onMenu,
@@ -258,21 +287,41 @@ function EventChip({
   onMenu: () => void;
 }) {
   const press = usePressActions(onView, onMenu);
+  if (compact) {
+    return (
+      <button
+        type="button"
+        data-block
+        aria-label={`${slice.event.company} ${TYPE_LABEL[slice.event.type]}`}
+        {...press}
+        className={`absolute z-[2] select-none ${TYPE_CLASS[slice.event.type]} ${
+          slice.conflicted ? "ring-1 ring-danger" : ""
+        } rounded-[5px]`}
+        style={{
+          top: top + 1,
+          height: Math.max(8, height - 2),
+          left: `calc(${slice.lane * widthPct}% + 2px)`,
+          width: `calc(${widthPct}% - 4px)`,
+          touchAction: "manipulation",
+        }}
+      />
+    );
+  }
   return (
     <button
       type="button"
       data-block
       {...press}
-      className={`absolute z-[2] overflow-hidden rounded-[12px] px-2 py-1 text-left select-none ${TYPE_CLASS[slice.event.type]} ${
+        className={`absolute z-[2] overflow-hidden rounded-[12px] px-2 py-1 text-left select-none ${TYPE_CLASS[slice.event.type]} ${
         slice.conflicted ? "ring-2 ring-danger ring-offset-1 ring-offset-surface-muted" : ""
       }`}
-      style={{
-        top: top + 2,
-        height: height - 4,
-        left: `calc(${slice.lane * widthPct}% + 6px)`,
-        width: `calc(${widthPct}% - 10px)`,
-        touchAction: "manipulation",
-      }}
+        style={{
+          top: top + 2,
+          height: height - 4,
+          left: `calc(${slice.lane * widthPct}% + 6px)`,
+          width: `calc(${widthPct}% - 10px)`,
+          touchAction: "manipulation",
+        }}
     >
       <p className={`truncate font-semibold ${dense ? "text-[12px]" : "text-[13px]"}`}>
         {slice.event.company}
@@ -296,15 +345,17 @@ function layoutPins(
   pins: RecruitEvent[],
   topOf: (d: Date) => number,
   height: number,
+  compact: boolean,
 ): { event: RecruitEvent; top: number }[] {
   const sorted = [...pins].sort(
     (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime(),
   );
+  const gap = compact ? 8 : 22;
   const out: { event: RecruitEvent; top: number }[] = [];
   let last = -999;
   for (const event of sorted) {
-    let top = Math.min(height - 22, Math.max(0, topOf(new Date(event.start))));
-    if (top - last < 22) top = last + 22;
+    let top = Math.min(height - gap, Math.max(0, topOf(new Date(event.start))));
+    if (top - last < gap) top = last + gap;
     last = top;
     out.push({ event, top });
   }
@@ -331,6 +382,24 @@ function AxisPin({
     : event.type === "exam"
       ? `开考 ${hm} · ${event.company}`
       : `开始 ${hm} · ${event.company}`;
+  if (compact) {
+    return (
+      <button
+        type="button"
+        data-block
+        aria-label={label}
+        {...press}
+        className={`absolute z-[3] rounded-[3px] select-none ${TYPE_CLASS[event.type]}`}
+        style={{
+          top: Math.max(2, top - 3),
+          height: 6,
+          left: 2,
+          right: 2,
+          touchAction: "manipulation",
+        }}
+      />
+    );
+  }
   return (
     <button
       type="button"

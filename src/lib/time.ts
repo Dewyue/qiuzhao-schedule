@@ -86,13 +86,16 @@ export function isSameDay(a: Date, b: Date): boolean {
 export function daysForRange(mode: RangeMode, now = new Date()): Date[] {
   const today = startOfDay(now);
   if (mode === "today") return [today];
-  if (mode === "upcoming") return [0, 1, 2, 3].map((i) => addDays(today, i));
-  const monday = startOfWeekMonday(today);
-  return [0, 1, 2, 3, 4, 5, 6].map((i) => addDays(monday, i));
+  if (mode === "tomorrow") return [addDays(today, 1)];
+  return [0, 1, 2, 3, 4, 5, 6].map((i) => addDays(today, i));
 }
 
 export function weekdayLabel(d: Date): string {
   return ["周日", "周一", "周二", "周三", "周四", "周五", "周六"][d.getDay()] ?? "";
+}
+
+export function weekdayShort(d: Date): string {
+  return ["日", "一", "二", "三", "四", "五", "六"][d.getDay()] ?? "";
 }
 
 export function formatHM(d: Date): string {
@@ -371,12 +374,9 @@ export function minFreeMinutes(mode: RangeMode): number {
 }
 
 export function labeledFrees(slots: FreeSlot[], mode: RangeMode): FreeSlot[] {
+  if (mode === "week") return [];
   const min = minFreeMinutes(mode);
-  const longEnough = slots.filter((s) => s.minutes >= min);
-  if (mode === "upcoming") {
-    return [...longEnough].sort((a, b) => b.minutes - a.minutes).slice(0, 3);
-  }
-  return longEnough;
+  return slots.filter((s) => s.minutes >= min);
 }
 
 export function longestFree(slots: FreeSlot[]): FreeSlot | null {

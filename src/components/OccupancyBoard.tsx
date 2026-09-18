@@ -19,8 +19,8 @@ import { DayColumn } from "./DayColumn";
 
 const HOUR_HEIGHT: Record<RangeMode, number> = {
   today: 64,
-  upcoming: 50,
-  week: 40,
+  tomorrow: 64,
+  week: 36,
 };
 
 export function OccupancyBoard({
@@ -50,24 +50,30 @@ export function OccupancyBoard({
   const hours = endHour - startHour;
   const hourHeight = HOUR_HEIGHT[mode];
 
+  const headerH = mode === "week" ? 44 : 72;
+  const gutter = 28;
+
   return (
-    <div className="flex min-w-0 gap-3 overflow-x-auto pb-2">
-      <div className="sticky left-0 z-[4] flex w-10 shrink-0 flex-col bg-surface">
-        <div className="h-[72px]" />
-        <div className="mb-3 h-1" />
+    <div className="relative min-w-0">
+      <div
+        className="pointer-events-none absolute top-0 z-[4] flex flex-col"
+        style={{ width: gutter }}
+      >
+        <div style={{ height: headerH }} />
+        <div className={mode === "week" ? "mb-3 h-0.5" : "mb-3 h-1"} />
         {Array.from({ length: hours + 1 }, (_, i) => (
           <div
             key={i}
-            className="relative text-right text-[11px] leading-none text-muted"
+            className="relative text-right text-[10px] leading-none text-muted"
             style={{ height: i === hours ? 0 : hourHeight }}
           >
-            <span className="absolute right-0 -translate-y-1/2">
+            <span className="absolute right-0.5 -translate-y-1/2 tabular-nums">
               {String(startHour + i).padStart(2, "0")}
             </span>
           </div>
         ))}
       </div>
-      <div className={`flex min-w-0 flex-1 gap-4 ${mode === "week" ? "min-w-[720px]" : ""}`}>
+      <div className={`flex min-w-0 ${mode === "week" ? "gap-1" : "gap-2"}`} style={{ paddingLeft: gutter }}>
         {days.map((day) => {
           const occ = occupancyEvents(events);
           const slices = layoutDayEvents(occ, day);
@@ -88,6 +94,7 @@ export function OccupancyBoard({
               mode={mode}
               now={now}
               selected={day.toDateString() === selectedDay.toDateString()}
+              headerHeight={headerH}
               onViewEvent={onViewEvent}
               onEventMenu={onEventMenu}
               onSelectFree={onSelectFree}
@@ -127,7 +134,7 @@ export function RangeSummary({
     if (longestDay) longest = Math.max(longest, longestDay.minutes);
   }
   const conflicts = conflictClusterCount(occ, days);
-  const rangeWord = mode === "today" ? "今天" : mode === "upcoming" ? "这几天" : "本周";
+  const rangeWord = mode === "today" ? "今天" : mode === "tomorrow" ? "明天" : "往后七天";
 
   return (
     <p className="text-[15px] text-muted">
