@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { DataActions } from "./components/DataActions";
 import { DayDetailList } from "./components/DayDetailList";
 import { EventForm } from "./components/EventForm";
 import { OccupancyBoard, RangeSummary } from "./components/OccupancyBoard";
@@ -60,7 +61,10 @@ export default function App() {
               秋招日程
             </h1>
           </div>
-          <RangeSwitch value={mode} onChange={setMode} />
+          <div className="flex flex-col gap-4 lg:items-end">
+            <RangeSwitch value={mode} onChange={setMode} />
+            <DataActions events={events} onImport={replace} />
+          </div>
         </header>
 
         <RangeSummary events={events} mode={mode} now={now} />
