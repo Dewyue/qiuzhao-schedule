@@ -1,4 +1,4 @@
-import { formatHM, TYPE_LABEL } from "../lib/time";
+import { formatEventSpan, TYPE_LABEL } from "../lib/time";
 import type { RecruitEvent } from "../types";
 
 export function EventDetail({
@@ -25,7 +25,7 @@ export function EventDetail({
         </h2>
         <p className="mt-3 text-[15px] tabular-nums text-muted">
           {new Date(event.start).getMonth() + 1}月{new Date(event.start).getDate()}日{" "}
-          {formatHM(new Date(event.start))}–{formatHM(new Date(event.end))}
+          {formatEventSpan(event)}
         </p>
         {event.location ? <p className="mt-2 text-[15px]">{event.location}</p> : null}
         {event.notes ? <p className="mt-2 text-[14px] leading-relaxed text-muted">{event.notes}</p> : null}

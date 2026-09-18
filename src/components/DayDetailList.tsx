@@ -1,6 +1,6 @@
 import type { RecruitEvent } from "../types";
 import { usePressActions } from "../lib/press";
-import { formatHM, isSameDay, TYPE_LABEL } from "../lib/time";
+import { formatEventSpan, isSameDay, TYPE_LABEL } from "../lib/time";
 
 export function DayDetailList({
   events,
@@ -64,7 +64,7 @@ function ListRow({
         </p>
       </div>
       <p className="shrink-0 text-[13px] tabular-nums text-muted">
-        {formatHM(new Date(event.start))}–{formatHM(new Date(event.end))}
+        {formatEventSpan(event)}
       </p>
     </button>
   );

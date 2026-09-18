@@ -14,6 +14,7 @@ const TYPE_CLASS: Record<RecruitEvent["type"], string> = {
   interview: "bg-accent text-white",
   exam: "bg-[#1c1c1e] text-white",
   assessment: "bg-[#4a5d8c] text-white",
+  jobfair: "bg-[#345c4b] text-white",
   other: "bg-muted text-white",
 };
 
@@ -23,6 +24,7 @@ export function DayColumn({
   endHour,
   hourHeight,
   slices,
+  deadlines,
   labeled,
   mode,
   now,
@@ -37,6 +39,7 @@ export function DayColumn({
   endHour: number;
   hourHeight: number;
   slices: EventSlice[];
+  deadlines: RecruitEvent[];
   labeled: FreeSlot[];
   mode: RangeMode;
   now: Date;
@@ -177,6 +180,21 @@ export function DayColumn({
           );
         })}
 
+        {deadlines.map((event) => {
+          const at = new Date(event.start);
+          const top = Math.min(height - 22, Math.max(0, topOf(at)));
+          return (
+            <DeadlinePin
+              key={event.id}
+              event={event}
+              top={top}
+              compact={compact}
+              onView={() => onViewEvent(event)}
+              onMenu={() => onEventMenu(event)}
+            />
+          );
+        })}
+
         {nowTop !== null && nowTop >= 0 && nowTop <= height ? (
           <div
             className="pointer-events-none absolute right-2 left-2 z-[3] flex items-center"
@@ -187,7 +205,7 @@ export function DayColumn({
           </div>
         ) : null}
 
-        {slices.length === 0 && labeled.length === 0 ? (
+        {slices.length === 0 && labeled.length === 0 && deadlines.length === 0 ? (
           <p className="pointer-events-none absolute inset-0 flex items-center justify-center text-[13px] text-muted">
             全天空闲
           </p>
@@ -248,6 +266,41 @@ function EventChip({
           {formatHM(slice.start)}–{formatHM(slice.end)}
         </p>
       ) : null}
+    </button>
+  );
+}
+
+function DeadlinePin({
+  event,
+  top,
+  compact,
+  onView,
+  onMenu,
+}: {
+  event: RecruitEvent;
+  top: number;
+  compact: boolean;
+  onView: () => void;
+  onMenu: () => void;
+}) {
+  const press = usePressActions(onView, onMenu);
+  return (
+    <button
+      type="button"
+      data-block
+      {...press}
+      className="absolute z-[3] flex items-center gap-1.5 rounded-[10px] bg-[#4a5d8c] px-2 py-0.5 text-left text-white select-none"
+      style={{
+        top: Math.max(4, top - 11),
+        left: 6,
+        right: 6,
+        touchAction: "manipulation",
+      }}
+    >
+      <span className="size-1.5 shrink-0 rounded-full bg-white" />
+      <span className={`truncate font-medium ${compact ? "text-[11px]" : "text-[12px]"}`}>
+        截止 {formatHM(new Date(event.start))} · {event.company}
+      </span>
     </button>
   );
 }

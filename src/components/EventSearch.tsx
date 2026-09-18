@@ -30,6 +30,8 @@ export function EventSearch({
           e.location ?? "",
           e.notes ?? "",
           formatMD(new Date(e.start)),
+          e.kind === "deadline" ? "截止 ddl" : "",
+          e.type === "jobfair" ? "双选会" : "",
         ]
           .join(" ")
           .toLowerCase();

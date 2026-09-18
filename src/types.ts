@@ -1,4 +1,6 @@
-export type EventType = "assessment" | "exam" | "interview" | "other";
+export type EventType = "assessment" | "exam" | "interview" | "jobfair" | "other";
+
+export type EventKind = "slot" | "deadline";
 
 export type RangeMode = "today" | "upcoming" | "week";
 
@@ -11,6 +13,7 @@ export type RecruitEvent = {
   end: string;
   location?: string;
   notes?: string;
+  kind?: EventKind;
 };
 
 export type FreeSlot = {

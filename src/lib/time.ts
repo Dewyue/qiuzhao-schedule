@@ -7,10 +7,29 @@ export const TYPE_LABEL: Record<RecruitEvent["type"], string> = {
   assessment: "测评",
   exam: "笔试",
   interview: "面试",
+  jobfair: "双选会",
   other: "其他",
 };
 
-export const FORM_TYPES: RecruitEvent["type"][] = ["assessment", "exam", "interview"];
+export const FORM_TYPES: RecruitEvent["type"][] = [
+  "assessment",
+  "exam",
+  "interview",
+  "jobfair",
+];
+
+export function isDeadline(event: Pick<RecruitEvent, "kind">): boolean {
+  return event.kind === "deadline";
+}
+
+export function occupancyEvents(events: RecruitEvent[]): RecruitEvent[] {
+  return events.filter((e) => !isDeadline(e));
+}
+
+export function formatEventSpan(event: RecruitEvent): string {
+  if (isDeadline(event)) return `截止 ${formatHM(new Date(event.start))}`;
+  return `${formatHM(new Date(event.start))}–${formatHM(new Date(event.end))}`;
+}
 
 export function pad(n: number): string {
   return String(n).padStart(2, "0");
@@ -66,9 +85,12 @@ export function formatYMD(d: Date): string {
 export type EventStatus = "done" | "live" | "upcoming";
 
 export function eventStatus(event: RecruitEvent, now = new Date()): EventStatus {
+  const t = now.getTime();
+  if (isDeadline(event)) {
+    return new Date(event.start).getTime() <= t ? "done" : "upcoming";
+  }
   const start = new Date(event.start).getTime();
   const end = new Date(event.end).getTime();
-  const t = now.getTime();
   if (end <= t) return "done";
   if (start <= t) return "live";
   return "upcoming";
@@ -178,7 +200,7 @@ export function freeSlotsOnDay(
     winEnd.setHours(endHour, 0, 0, 0);
   }
 
-  const slices = events
+  const slices = occupancyEvents(events)
     .map((e) => sliceEventOnDay(e, day))
     .filter((s): s is { start: Date; end: Date } => s !== null)
     .map((s) => ({
@@ -209,7 +231,7 @@ function overlaps(a: { start: Date; end: Date }, b: { start: Date; end: Date }):
 }
 
 export function layoutDayEvents(events: RecruitEvent[], day: Date): EventSlice[] {
-  const slices = events
+  const slices = occupancyEvents(events)
     .map((event) => {
       const s = sliceEventOnDay(event, day);
       if (!s) return null;
@@ -397,12 +419,22 @@ export function sampleEvents(now = new Date()): RecruitEvent[] {
       end: iso(1, 10, 30),
     },
     {
-      id: "sample-5",
-      company: "网易",
-      type: "interview",
-      title: "HR面",
-      start: iso(2, 19, 0),
-      end: iso(2, 20, 0),
+      id: "sample-6",
+      company: "小红书",
+      type: "assessment",
+      title: "截止",
+      kind: "deadline",
+      start: iso(0, 23, 0),
+      end: iso(0, 23, 1),
+    },
+    {
+      id: "sample-7",
+      company: "华为",
+      type: "jobfair",
+      title: "",
+      start: iso(1, 13, 0),
+      end: iso(1, 17, 0),
+      location: "学校体育馆",
     },
   ];
 }

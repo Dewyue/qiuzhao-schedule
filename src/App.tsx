@@ -31,6 +31,7 @@ export default function App() {
       end: "",
       location: "",
       notes: "",
+      kind: "slot",
     };
   }
 
@@ -73,6 +74,7 @@ export default function App() {
       end: event.end,
       location: event.location ?? "",
       notes: event.notes ?? "",
+      kind: event.kind === "deadline" ? "deadline" : "slot",
     };
   }
 

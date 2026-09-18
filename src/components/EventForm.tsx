@@ -1,7 +1,7 @@
 import type { FormEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { FORM_TYPES, TYPE_LABEL, toDatetimeLocal } from "../lib/time";
-import type { EventType, RecruitEvent } from "../types";
+import type { EventKind, EventType, RecruitEvent } from "../types";
 
 const ROUNDS = ["一面", "二面", "终面"] as const;
 const DURATION_MINUTES = Array.from({ length: 24 }, (_, i) => (i + 1) * 10);
@@ -27,6 +27,7 @@ export function EventForm({
   const initialType = FORM_TYPES.includes(source.type) ? source.type : "interview";
   const [company, setCompany] = useState(source.company);
   const [type, setType] = useState<EventType>(initialType);
+  const [kind, setKind] = useState<EventKind>(source.kind === "deadline" ? "deadline" : "slot");
   const [title, setTitle] = useState(source.title);
   const [start, setStart] = useState(source.start ? toDatetimeLocal(new Date(source.start)) : "");
   const [end, setEnd] = useState(source.end ? toDatetimeLocal(new Date(source.end)) : "");
@@ -38,6 +39,7 @@ export function EventForm({
     const next = editing ?? draft;
     setCompany(next.company);
     setType(FORM_TYPES.includes(next.type) ? next.type : "interview");
+    setKind(next.kind === "deadline" ? "deadline" : "slot");
     setTitle(next.title);
     setStart(next.start ? toDatetimeLocal(new Date(next.start)) : "");
     setEnd(next.end ? toDatetimeLocal(new Date(next.end)) : "");
@@ -70,6 +72,10 @@ export function EventForm({
       applyDuration(duration || 60, value);
       return;
     }
+    if (type === "assessment" && kind === "deadline") {
+      setEnd(value);
+      return;
+    }
     if (duration) applyDuration(duration, value);
   }
 
@@ -78,21 +84,32 @@ export function EventForm({
     if (!company.trim() || !start) return;
     if (type === "interview" && !title) return;
     const startDate = new Date(start);
-    let endDate = end ? new Date(end) : new Date(startDate.getTime() + 60 * 60 * 1000);
-    if (type === "interview" && !end) {
+    const deadline = type === "assessment" && kind === "deadline";
+    let endDate: Date;
+    if (deadline) {
+      endDate = new Date(startDate.getTime() + 60 * 1000);
+    } else if (type === "interview" && !end) {
       endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
+    } else if (end) {
+      endDate = new Date(end);
+    } else {
+      return;
     }
     if (!(endDate.getTime() > startDate.getTime())) return;
+    const showLocation = type === "interview" || type === "jobfair";
     onSave({
       company: company.trim(),
       type,
-      title: type === "interview" ? title : "",
+      title: type === "interview" ? title : deadline ? "截止" : "",
       start: startDate.toISOString(),
       end: endDate.toISOString(),
-      location: type === "interview" ? location.trim() || undefined : undefined,
+      location: showLocation ? location.trim() || undefined : undefined,
       notes: notes.trim() || undefined,
+      kind: deadline ? "deadline" : "slot",
     });
   }
+
+  const timed = type === "exam" || (type === "assessment" && kind === "slot");
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3">
@@ -104,12 +121,12 @@ export function EventForm({
       </div>
 
       <label className="flex flex-col gap-1">
-        <span className="text-[13px] text-muted">公司</span>
+        <span className="text-[13px] text-muted">{type === "jobfair" ? "企业名" : "公司"}</span>
         <input
           required
           value={company}
           onChange={(e) => setCompany(e.target.value)}
-          placeholder="公司名称"
+          placeholder={type === "jobfair" ? "企业 / 主办方" : "公司名称"}
           className={FIELD}
         />
       </label>
@@ -122,7 +139,8 @@ export function EventForm({
             const next = e.target.value as EventType;
             setType(next);
             if (next !== "interview") setTitle("");
-            if (next !== "interview") setLocation("");
+            if (next !== "interview" && next !== "jobfair") setLocation("");
+            if (next !== "assessment") setKind("slot");
             if (next === "interview") applyDuration(duration || 60, start);
           }}
           className={FIELD}
@@ -134,6 +152,41 @@ export function EventForm({
           ))}
         </select>
       </label>
+
+      {type === "assessment" ? (
+        <fieldset className="flex flex-col gap-1">
+          <legend className="text-[13px] text-muted">怎么记</legend>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setKind("slot")}
+              className={
+                kind === "slot"
+                  ? "h-10 flex-1 rounded-[12px] bg-accent text-[14px] font-medium text-white"
+                  : "h-10 flex-1 rounded-[12px] bg-surface-muted text-[14px] font-medium"
+              }
+            >
+              限时场次
+            </button>
+            <button
+              type="button"
+              onClick={() => setKind("deadline")}
+              className={
+                kind === "deadline"
+                  ? "h-10 flex-1 rounded-[12px] bg-accent text-[14px] font-medium text-white"
+                  : "h-10 flex-1 rounded-[12px] bg-surface-muted text-[14px] font-medium"
+              }
+            >
+              截止提交
+            </button>
+          </div>
+          {kind === "deadline" ? (
+            <p className="text-[12px] leading-relaxed text-muted">
+              只记 DDL，不占用当天空闲。时间轴上会在截止时刻打一个标记。
+            </p>
+          ) : null}
+        </fieldset>
+      ) : null}
 
       {type === "interview" ? (
         <fieldset className="flex flex-col gap-1">
@@ -158,7 +211,9 @@ export function EventForm({
       ) : null}
 
       <label className="flex flex-col gap-1">
-        <span className="text-[13px] text-muted">开始</span>
+        <span className="text-[13px] text-muted">
+          {type === "assessment" && kind === "deadline" ? "截止时间" : "开始"}
+        </span>
         <input
           type="datetime-local"
           required
@@ -168,7 +223,7 @@ export function EventForm({
         />
       </label>
 
-      {type !== "interview" ? (
+      {timed ? (
         <>
           <label className="flex flex-col gap-1">
             <span className="text-[13px] text-muted">时长</span>
@@ -194,20 +249,32 @@ export function EventForm({
                 setEnd(e.target.value);
                 setDuration(minutesBetween(start, e.target.value));
               }}
-              placeholder="由时长填入"
               className={FIELD}
             />
           </label>
         </>
       ) : null}
 
-      {type === "interview" ? (
+      {type === "jobfair" ? (
+        <label className="flex flex-col gap-1">
+          <span className="text-[13px] text-muted">结束</span>
+          <input
+            type="datetime-local"
+            required
+            value={end}
+            onChange={(e) => setEnd(e.target.value)}
+            className={FIELD}
+          />
+        </label>
+      ) : null}
+
+      {type === "interview" || type === "jobfair" ? (
         <label className="flex flex-col gap-1">
           <span className="text-[13px] text-muted">地点</span>
           <input
             value={location}
             onChange={(e) => setLocation(e.target.value)}
-            placeholder="线下面试 / 公司"
+            placeholder={type === "jobfair" ? "场馆 / 学校" : "线下面试 / 公司"}
             className={FIELD}
           />
         </label>

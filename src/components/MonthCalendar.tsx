@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import {
   eventStatus,
   eventTouchesDay,
-  formatHM,
+  formatEventSpan,
   formatMD,
   isSameDay,
   monthGrid,
@@ -152,7 +152,7 @@ export function EventRow({
           {TYPE_LABEL[event.type]}
           {event.title ? ` · ${event.title}` : ""}
           {" · "}
-          {formatHM(new Date(event.start))}–{formatHM(new Date(event.end))}
+          {formatEventSpan(event)}
         </p>
       </div>
       <span

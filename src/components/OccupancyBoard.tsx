@@ -2,12 +2,15 @@ import type { FreeSlot, RangeMode, RecruitEvent } from "../types";
 import {
   conflictClusterCount,
   daysForRange,
+  eventTouchesDay,
   freeSlotsOnDay,
   hoursWindow,
+  isDeadline,
   labeledFrees,
   layoutDayEvents,
   longestFree,
   formatDuration,
+  occupancyEvents,
 } from "../lib/time";
 import { DayColumn } from "./DayColumn";
 
@@ -60,8 +63,10 @@ export function OccupancyBoard({
       </div>
       <div className={`flex min-w-0 flex-1 gap-4 ${mode === "week" ? "min-w-[720px]" : ""}`}>
         {days.map((day) => {
-          const slices = layoutDayEvents(events, day);
-          const frees = freeSlotsOnDay(events, day, startHour, endHour);
+          const occ = occupancyEvents(events);
+          const slices = layoutDayEvents(occ, day);
+          const frees = freeSlotsOnDay(occ, day, startHour, endHour);
+          const deadlines = events.filter((e) => isDeadline(e) && eventTouchesDay(e, day));
           return (
             <DayColumn
               key={day.toISOString()}
@@ -70,6 +75,7 @@ export function OccupancyBoard({
               endHour={endHour}
               hourHeight={hourHeight}
               slices={slices}
+              deadlines={deadlines}
               labeled={labeledFrees(frees, mode)}
               mode={mode}
               now={now}
@@ -96,21 +102,30 @@ export function RangeSummary({
   now: Date;
 }) {
   const days = daysForRange(mode, now);
-  const { startHour, endHour } = hoursWindow(events, days);
+  const occ = occupancyEvents(events);
+  const { startHour, endHour } = hoursWindow(occ.concat(events.filter(isDeadline)), days);
   let eventCount = 0;
   let longest = 0;
+  let ddlCount = 0;
   for (const day of days) {
-    const slices = layoutDayEvents(events, day);
+    const slices = layoutDayEvents(occ, day);
     eventCount += slices.length;
-    const longestDay = longestFree(freeSlotsOnDay(events, day, startHour, endHour));
+    ddlCount += events.filter((e) => isDeadline(e) && eventTouchesDay(e, day)).length;
+    const longestDay = longestFree(freeSlotsOnDay(occ, day, startHour, endHour));
     if (longestDay) longest = Math.max(longest, longestDay.minutes);
   }
-  const conflicts = conflictClusterCount(events, days);
+  const conflicts = conflictClusterCount(occ, days);
   const rangeWord = mode === "today" ? "今天" : mode === "upcoming" ? "这几天" : "本周";
 
   return (
     <p className="text-[15px] text-muted">
       {rangeWord} {eventCount} 场
+      {ddlCount > 0 ? (
+        <>
+          <span className="mx-2 text-border">·</span>
+          {ddlCount} 个截止
+        </>
+      ) : null}
       <span className="mx-2 text-border">·</span>
       空闲最长 {longest > 0 ? formatDuration(longest) : "无"}
       {conflicts > 0 ? (

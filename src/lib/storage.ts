@@ -2,7 +2,7 @@ import type { EventType, RecruitEvent } from "../types";
 
 const KEY = "qiuzhao-schedule:events:v1";
 
-const TYPES: EventType[] = ["assessment", "exam", "interview", "other"];
+const TYPES: EventType[] = ["assessment", "exam", "interview", "jobfair", "other"];
 
 export type ExportPayload = {
   app: "qiuzhao-schedule";
@@ -52,6 +52,7 @@ function normalizeEvent(item: unknown, index: number): RecruitEvent {
     throw new Error(`第 ${index + 1} 条缺少有效的公司或时间`);
   }
   const type = TYPES.includes(row.type as EventType) ? (row.type as EventType) : "other";
+  const kind = row.kind === "deadline" ? "deadline" : "slot";
   return {
     id: String(row.id ?? crypto.randomUUID()),
     company,
@@ -61,6 +62,7 @@ function normalizeEvent(item: unknown, index: number): RecruitEvent {
     end: new Date(end).toISOString(),
     location: row.location ? String(row.location) : undefined,
     notes: row.notes ? String(row.notes) : undefined,
+    kind,
   };
 }
 
