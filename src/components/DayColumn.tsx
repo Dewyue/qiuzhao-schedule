@@ -1,5 +1,6 @@
 import type { MouseEvent } from "react";
 import type { EventSlice, FreeSlot, RangeMode, RecruitEvent } from "../types";
+import { usePressActions } from "../lib/press";
 import {
   formatDuration,
   formatHM,
@@ -26,7 +27,8 @@ export function DayColumn({
   mode,
   now,
   selected,
-  onSelectEvent,
+  onViewEvent,
+  onEventMenu,
   onSelectFree,
   onPickTime,
 }: {
@@ -39,7 +41,8 @@ export function DayColumn({
   mode: RangeMode;
   now: Date;
   selected: boolean;
-  onSelectEvent: (event: RecruitEvent) => void;
+  onViewEvent: (event: RecruitEvent) => void;
+  onEventMenu: (event: RecruitEvent) => void;
   onSelectFree: (slot: FreeSlot) => void;
   onPickTime: (start: Date) => void;
 }) {
@@ -159,39 +162,18 @@ export function DayColumn({
           const widthPct = 100 / s.laneCount;
           const dense = h < 40 || compact;
           return (
-            <button
+            <EventChip
               key={s.event.id}
-              type="button"
-              data-block
-              onClick={(e) => {
-                e.stopPropagation();
-                onSelectEvent(s.event);
-              }}
-              className={`absolute z-[2] overflow-hidden rounded-[12px] px-2 py-1 text-left ${TYPE_CLASS[s.event.type]} ${
-                s.conflicted ? "ring-2 ring-danger ring-offset-1 ring-offset-surface-muted" : ""
-              }`}
-              style={{
-                top: top + 2,
-                height: h - 4,
-                left: `calc(${s.lane * widthPct}% + 6px)`,
-                width: `calc(${widthPct}% - 10px)`,
-              }}
-            >
-              <p className={`truncate font-semibold ${dense ? "text-[12px]" : "text-[13px]"}`}>
-                {s.event.company}
-              </p>
-              {!dense ? (
-                <p className="truncate text-[11px] opacity-80">
-                  {TYPE_LABEL[s.event.type]}
-                  {s.event.title ? ` · ${s.event.title}` : ""}
-                </p>
-              ) : null}
-              {h > 56 && mode === "today" ? (
-                <p className="mt-0.5 text-[11px] opacity-80">
-                  {formatHM(s.start)}–{formatHM(s.end)}
-                </p>
-              ) : null}
-            </button>
+              slice={s}
+              top={top}
+              height={h}
+              widthPct={widthPct}
+              dense={dense}
+              compact={compact}
+              showTime={h > 56 && mode === "today"}
+              onView={() => onViewEvent(s.event)}
+              onMenu={() => onEventMenu(s.event)}
+            />
           );
         })}
 
@@ -212,5 +194,60 @@ export function DayColumn({
         ) : null}
       </div>
     </section>
+  );
+}
+
+function EventChip({
+  slice,
+  top,
+  height,
+  widthPct,
+  dense,
+  showTime,
+  onView,
+  onMenu,
+}: {
+  slice: EventSlice;
+  top: number;
+  height: number;
+  widthPct: number;
+  dense: boolean;
+  compact: boolean;
+  showTime: boolean;
+  onView: () => void;
+  onMenu: () => void;
+}) {
+  const press = usePressActions(onView, onMenu);
+  return (
+    <button
+      type="button"
+      data-block
+      {...press}
+      className={`absolute z-[2] overflow-hidden rounded-[12px] px-2 py-1 text-left select-none ${TYPE_CLASS[slice.event.type]} ${
+        slice.conflicted ? "ring-2 ring-danger ring-offset-1 ring-offset-surface-muted" : ""
+      }`}
+      style={{
+        top: top + 2,
+        height: height - 4,
+        left: `calc(${slice.lane * widthPct}% + 6px)`,
+        width: `calc(${widthPct}% - 10px)`,
+        touchAction: "manipulation",
+      }}
+    >
+      <p className={`truncate font-semibold ${dense ? "text-[12px]" : "text-[13px]"}`}>
+        {slice.event.company}
+      </p>
+      {!dense ? (
+        <p className="truncate text-[11px] opacity-80">
+          {TYPE_LABEL[slice.event.type]}
+          {slice.event.title ? ` · ${slice.event.title}` : ""}
+        </p>
+      ) : null}
+      {showTime ? (
+        <p className="mt-0.5 text-[11px] opacity-80">
+          {formatHM(slice.start)}–{formatHM(slice.end)}
+        </p>
+      ) : null}
+    </button>
   );
 }

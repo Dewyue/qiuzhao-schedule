@@ -1,14 +1,17 @@
 import type { RecruitEvent } from "../types";
+import { usePressActions } from "../lib/press";
 import { formatHM, isSameDay, TYPE_LABEL } from "../lib/time";
 
 export function DayDetailList({
   events,
   day,
-  onSelect,
+  onView,
+  onMenu,
 }: {
   events: RecruitEvent[];
   day: Date;
-  onSelect: (event: RecruitEvent) => void;
+  onView: (event: RecruitEvent) => void;
+  onMenu: (event: RecruitEvent) => void;
 }) {
   const items = events
     .filter((e) => isSameDay(new Date(e.start), day) || overlapsDay(e, day))
@@ -16,10 +19,10 @@ export function DayDetailList({
 
   if (items.length === 0) {
     return (
-      <div className="rounded-[24px] bg-surface-muted px-5 py-6">
+      <div className="px-1 py-4">
         <p className="text-[15px] font-medium">这一天还空着</p>
         <p className="mt-1 text-[14px] leading-relaxed text-muted">
-          点时间柱上的空白，或右侧记下公司、时间和类型。空闲段会标出最长可排的间隔。
+          点时间柱上的空白去记录。点一场查看详情，长按编辑或删除。
         </p>
       </div>
     );
@@ -29,25 +32,41 @@ export function DayDetailList({
     <ul className="flex flex-col gap-2">
       {items.map((e) => (
         <li key={e.id}>
-          <button
-            type="button"
-            onClick={() => onSelect(e)}
-            className="flex w-full items-start justify-between gap-3 rounded-[18px] bg-surface-muted px-4 py-3 text-left hover:bg-[#ececf0]"
-          >
-            <div className="min-w-0">
-              <p className="truncate text-[15px] font-semibold tracking-[-0.02em]">{e.company}</p>
-              <p className="mt-0.5 text-[13px] text-muted">
-                {TYPE_LABEL[e.type]}
-                {e.title ? ` · ${e.title}` : ""}
-              </p>
-            </div>
-            <p className="shrink-0 text-[13px] tabular-nums text-muted">
-              {formatHM(new Date(e.start))}–{formatHM(new Date(e.end))}
-            </p>
-          </button>
+          <ListRow event={e} onView={() => onView(e)} onMenu={() => onMenu(e)} />
         </li>
       ))}
     </ul>
+  );
+}
+
+function ListRow({
+  event,
+  onView,
+  onMenu,
+}: {
+  event: RecruitEvent;
+  onView: () => void;
+  onMenu: () => void;
+}) {
+  const press = usePressActions(onView, onMenu);
+  return (
+    <button
+      type="button"
+      {...press}
+      className="flex w-full items-start justify-between gap-3 rounded-[18px] bg-surface-muted px-4 py-3 text-left select-none hover:bg-[#ececf0]"
+      style={{ touchAction: "manipulation" }}
+    >
+      <div className="min-w-0">
+        <p className="truncate text-[15px] font-semibold tracking-[-0.02em]">{event.company}</p>
+        <p className="mt-0.5 text-[13px] text-muted">
+          {TYPE_LABEL[event.type]}
+          {event.title ? ` · ${event.title}` : ""}
+        </p>
+      </div>
+      <p className="shrink-0 text-[13px] tabular-nums text-muted">
+        {formatHM(new Date(event.start))}–{formatHM(new Date(event.end))}
+      </p>
+    </button>
   );
 }
 

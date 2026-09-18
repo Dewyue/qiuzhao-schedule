@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { BottomNav, type Tab } from "./components/BottomNav";
 import { DataPanel } from "./components/DataPanel";
 import { DayDetailList } from "./components/DayDetailList";
+import { EventDetail, EventMenu } from "./components/EventDialogs";
 import { EventForm } from "./components/EventForm";
 import { OccupancyBoard, RangeSummary } from "./components/OccupancyBoard";
 import { RangeSwitch } from "./components/RangeSwitch";
@@ -17,6 +18,8 @@ export default function App() {
   const [selectedDay, setSelectedDay] = useState(() => startOfDay(new Date()));
   const [editing, setEditing] = useState<RecruitEvent | null>(null);
   const [draft, setDraft] = useState<Omit<RecruitEvent, "id">>(() => defaultDraft());
+  const [viewing, setViewing] = useState<RecruitEvent | null>(null);
+  const [menuEvent, setMenuEvent] = useState<RecruitEvent | null>(null);
 
   function defaultDraft(start?: Date): Omit<RecruitEvent, "id"> {
     const s = start ?? snapNextHour();
@@ -34,6 +37,8 @@ export default function App() {
   function openRecord(next: Omit<RecruitEvent, "id">, event?: RecruitEvent | null) {
     setDraft(next);
     setEditing(event ?? null);
+    setViewing(null);
+    setMenuEvent(null);
     setTab("record");
   }
 
@@ -47,20 +52,28 @@ export default function App() {
     openRecord(defaultDraft(start));
   }
 
-  function onSelectEvent(event: RecruitEvent) {
+  function onViewEvent(event: RecruitEvent) {
+    setMenuEvent(null);
     setSelectedDay(startOfDay(new Date(event.start)));
-    openRecord(
-      {
-        company: event.company,
-        type: event.type,
-        title: event.title,
-        start: event.start,
-        end: event.end,
-        location: event.location ?? "",
-        notes: event.notes ?? "",
-      },
-      event,
-    );
+    setViewing(event);
+  }
+
+  function onEventMenu(event: RecruitEvent) {
+    setViewing(null);
+    setSelectedDay(startOfDay(new Date(event.start)));
+    setMenuEvent(event);
+  }
+
+  function eventToDraft(event: RecruitEvent): Omit<RecruitEvent, "id"> {
+    return {
+      company: event.company,
+      type: event.type,
+      title: event.title,
+      start: event.start,
+      end: event.end,
+      location: event.location ?? "",
+      notes: event.notes ?? "",
+    };
   }
 
   return (
@@ -78,21 +91,27 @@ export default function App() {
               mode={mode}
               now={now}
               selectedDay={selectedDay}
-              onSelectEvent={onSelectEvent}
+              onViewEvent={onViewEvent}
+              onEventMenu={onEventMenu}
               onSelectFree={onSelectFree}
               onPickTime={onPickTime}
             />
             {mode === "today" ? (
               <div className="mt-2">
                 <p className="mb-2 text-[13px] font-medium text-muted">当日列表</p>
-                <DayDetailList events={events} day={selectedDay} onSelect={onSelectEvent} />
+                <DayDetailList
+                  events={events}
+                  day={selectedDay}
+                  onView={onViewEvent}
+                  onMenu={onEventMenu}
+                />
               </div>
             ) : null}
           </>
         ) : null}
 
         {tab === "record" ? (
-          <div className="mx-auto w-full max-w-[480px] rounded-[20px] bg-surface-muted p-5">
+          <div className="mx-auto w-full max-w-[480px] py-2">
             <EventForm
               draft={draft}
               editing={editing}
@@ -134,6 +153,18 @@ export default function App() {
         ) : null}
       </div>
       <BottomNav value={tab} onChange={setTab} />
+      {viewing ? <EventDetail event={viewing} onClose={() => setViewing(null)} /> : null}
+      {menuEvent ? (
+        <EventMenu
+          event={menuEvent}
+          onClose={() => setMenuEvent(null)}
+          onEdit={() => openRecord(eventToDraft(menuEvent), menuEvent)}
+          onDelete={() => {
+            remove(menuEvent.id);
+            setMenuEvent(null);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

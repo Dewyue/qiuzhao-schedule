@@ -10,6 +10,8 @@ export const TYPE_LABEL: Record<RecruitEvent["type"], string> = {
   other: "其他",
 };
 
+export const FORM_TYPES: RecruitEvent["type"][] = ["assessment", "exam", "interview"];
+
 export function pad(n: number): string {
   return String(n).padStart(2, "0");
 }
