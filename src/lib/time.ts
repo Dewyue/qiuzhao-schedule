@@ -18,16 +18,41 @@ export const FORM_TYPES: RecruitEvent["type"][] = [
   "jobfair",
 ];
 
+export function eventKind(event: Pick<RecruitEvent, "kind">): RecruitEvent["kind"] {
+  return event.kind ?? "slot";
+}
+
 export function isDeadline(event: Pick<RecruitEvent, "kind">): boolean {
-  return event.kind === "deadline";
+  return eventKind(event) === "deadline";
+}
+
+export function isAllDay(event: Pick<RecruitEvent, "kind">): boolean {
+  return eventKind(event) === "allday";
+}
+
+export function isOpenStart(event: Pick<RecruitEvent, "kind">): boolean {
+  return eventKind(event) === "open";
+}
+
+export function occupiesTime(event: Pick<RecruitEvent, "kind">): boolean {
+  return eventKind(event) === "slot";
 }
 
 export function occupancyEvents(events: RecruitEvent[]): RecruitEvent[] {
-  return events.filter((e) => !isDeadline(e));
+  return events.filter(occupiesTime);
+}
+
+export function axisPins(events: RecruitEvent[]): RecruitEvent[] {
+  return events.filter((e) => isDeadline(e) || isOpenStart(e));
 }
 
 export function formatEventSpan(event: RecruitEvent): string {
   if (isDeadline(event)) return `截止 ${formatHM(new Date(event.start))}`;
+  if (isAllDay(event)) return "当天 · 时间待定";
+  if (isOpenStart(event)) {
+    const verb = event.type === "exam" ? "开考" : "开始";
+    return `${verb} ${formatHM(new Date(event.start))} · 时长待定`;
+  }
   return `${formatHM(new Date(event.start))}–${formatHM(new Date(event.end))}`;
 }
 
@@ -86,8 +111,17 @@ export type EventStatus = "done" | "live" | "upcoming";
 
 export function eventStatus(event: RecruitEvent, now = new Date()): EventStatus {
   const t = now.getTime();
-  if (isDeadline(event)) {
+  if (isDeadline(event) || isAllDay(event)) {
+    const dayEnd = addDays(startOfDay(new Date(event.start)), 1);
+    if (isAllDay(event)) return t >= dayEnd.getTime() ? "done" : "upcoming";
     return new Date(event.start).getTime() <= t ? "done" : "upcoming";
+  }
+  if (isOpenStart(event)) {
+    const start = new Date(event.start).getTime();
+    const dayEnd = addDays(startOfDay(new Date(event.start)), 1).getTime();
+    if (t >= dayEnd) return "done";
+    if (t >= start) return "live";
+    return "upcoming";
   }
   const start = new Date(event.start).getTime();
   const end = new Date(event.end).getTime();
@@ -157,6 +191,7 @@ export function hoursWindow(
   let endHour = DEFAULT_END_HOUR;
   for (const day of days) {
     for (const event of events) {
+      if (isAllDay(event)) continue;
       const slice = sliceEventOnDay(event, day);
       if (!slice) continue;
       startHour = Math.min(startHour, Math.floor(hourDecimal(slice.start, day)));
@@ -377,64 +412,103 @@ export function yToTime(
   return snapToQuarter(t);
 }
 
-export function sampleEvents(now = new Date()): RecruitEvent[] {
-  const d = startOfDay(now);
-  const iso = (dayOffset: number, h: number, m: number) => {
-    const x = addDays(d, dayOffset);
-    x.setHours(h, m, 0, 0);
-    return x.toISOString();
-  };
+function localIso(year: number, month: number, day: number, hour: number, minute: number): string {
+  return new Date(year, month - 1, day, hour, minute, 0, 0).toISOString();
+}
+
+function markSpan(startIso: string): { start: string; end: string } {
+  const start = new Date(startIso);
+  return { start: start.toISOString(), end: new Date(start.getTime() + 60_000).toISOString() };
+}
+
+export function sampleEvents(_now = new Date()): RecruitEvent[] {
+  const ddl = (company: string, type: RecruitEvent["type"], startIso: string, extra: Partial<RecruitEvent> = {}): RecruitEvent => ({
+    id: "",
+    company,
+    type,
+    title: "截止",
+    kind: "deadline",
+    ...markSpan(startIso),
+    ...extra,
+  });
+
   return [
+    ddl("北森云计算", "assessment", localIso(2026, 9, 20, 17, 22), { id: "init-beisen" }),
+    ddl("京东", "assessment", localIso(2026, 9, 20, 12, 0), { id: "init-jd" }),
+    ddl("京东实习", "assessment", localIso(2026, 9, 20, 12, 0), { id: "init-jd-intern" }),
+    ddl("联想", "assessment", localIso(2026, 9, 21, 12, 0), { id: "init-lenovo-assess" }),
+    ddl("广汽", "assessment", localIso(2026, 10, 3, 12, 0), { id: "init-gac" }),
     {
-      id: "sample-1",
-      company: "字节跳动",
-      type: "interview",
-      title: "一面",
-      start: iso(0, 10, 0),
-      end: iso(0, 11, 0),
-    },
-    {
-      id: "sample-2",
-      company: "腾讯",
-      type: "interview",
-      title: "二面",
-      start: iso(0, 10, 30),
-      end: iso(0, 11, 30),
-    },
-    {
-      id: "sample-3",
-      company: "阿里巴巴",
-      type: "exam",
-      title: "在线笔试",
-      start: iso(0, 14, 0),
-      end: iso(0, 16, 0),
-      location: "https://exam.example.com",
-    },
-    {
-      id: "sample-4",
+      id: "init-meituan-exam",
       company: "美团",
-      type: "assessment",
-      title: "性格测评",
-      start: iso(1, 9, 0),
-      end: iso(1, 10, 30),
-    },
-    {
-      id: "sample-6",
-      company: "小红书",
-      type: "assessment",
-      title: "截止",
-      kind: "deadline",
-      start: iso(0, 23, 0),
-      end: iso(0, 23, 1),
-    },
-    {
-      id: "sample-7",
-      company: "华为",
-      type: "jobfair",
+      type: "exam",
       title: "",
-      start: iso(1, 13, 0),
-      end: iso(1, 17, 0),
-      location: "学校体育馆",
+      kind: "slot",
+      start: localIso(2026, 9, 19, 15, 0),
+      end: localIso(2026, 9, 19, 16, 30),
     },
+    ddl("联想", "exam", localIso(2026, 9, 21, 12, 0), { id: "init-lenovo-exam" }),
+    ddl("蓝色光标", "exam", localIso(2026, 9, 21, 12, 0), {
+      id: "init-bluemoon",
+      notes: "包括 AI 面试",
+    }),
+    {
+      id: "init-boke",
+      company: "波克",
+      type: "exam",
+      title: "",
+      kind: "open",
+      ...markSpan(localIso(2026, 9, 22, 19, 0)),
+    },
+    {
+      id: "init-pdd",
+      company: "拼多多",
+      type: "exam",
+      title: "",
+      kind: "open",
+      ...markSpan(localIso(2026, 9, 22, 19, 0)),
+    },
+    {
+      id: "init-anker",
+      company: "安克",
+      type: "interview",
+      title: "",
+      kind: "slot",
+      start: localIso(2026, 9, 19, 13, 30),
+      end: localIso(2026, 9, 19, 15, 30),
+      location: "立言厅",
+    },
+    {
+      id: "init-netease",
+      company: "网易互娱",
+      type: "interview",
+      title: "",
+      kind: "allday",
+      ...markSpan(localIso(2026, 9, 19, 0, 0)),
+    },
+    ddl("携程", "interview", localIso(2026, 9, 21, 12, 0), {
+      id: "init-ctrip",
+      notes: "AI",
+    }),
+    ddl("华勤算法", "interview", localIso(2026, 9, 25, 17, 24), {
+      id: "init-huaqin",
+      notes: "AI",
+    }),
   ];
+}
+
+const OLD_DEMO_COMPANIES = new Set([
+  "字节跳动",
+  "腾讯",
+  "阿里巴巴",
+  "美团",
+  "小红书",
+  "华为",
+  "网易",
+]);
+
+export function isLegacyPlaceholder(events: RecruitEvent[]): boolean {
+  if (events.length === 0) return true;
+  if (events.every((e) => String(e.id).startsWith("sample-"))) return true;
+  return events.every((e) => OLD_DEMO_COMPANIES.has(e.company));
 }

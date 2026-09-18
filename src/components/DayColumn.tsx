@@ -4,6 +4,7 @@ import { usePressActions } from "../lib/press";
 import {
   formatDuration,
   formatHM,
+  isDeadline,
   isSameDay,
   mergeBusy,
   TYPE_LABEL,
@@ -24,7 +25,8 @@ export function DayColumn({
   endHour,
   hourHeight,
   slices,
-  deadlines,
+  pins,
+  pending,
   labeled,
   mode,
   now,
@@ -39,7 +41,8 @@ export function DayColumn({
   endHour: number;
   hourHeight: number;
   slices: EventSlice[];
-  deadlines: RecruitEvent[];
+  pins: RecruitEvent[];
+  pending: RecruitEvent[];
   labeled: FreeSlot[];
   mode: RangeMode;
   now: Date;
@@ -124,6 +127,29 @@ export function DayColumn({
         onClick={onBgClick}
         role="presentation"
       >
+        {pending.length > 0 ? (
+          <div className="absolute top-2 right-2 left-2 z-[3] flex flex-wrap gap-1">
+            {pending.map((event) => (
+              <button
+                key={event.id}
+                type="button"
+                data-block
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onViewEvent(event);
+                }}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  onEventMenu(event);
+                }}
+                className="rounded-[8px] bg-white px-1.5 py-0.5 text-[11px] font-medium text-accent shadow-sm"
+              >
+                {event.company} · 待定
+              </button>
+            ))}
+          </div>
+        ) : null}
+
         {Array.from({ length: hours + 1 }, (_, i) => (
           <div
             key={i}
@@ -180,20 +206,16 @@ export function DayColumn({
           );
         })}
 
-        {deadlines.map((event) => {
-          const at = new Date(event.start);
-          const top = Math.min(height - 22, Math.max(0, topOf(at)));
-          return (
-            <DeadlinePin
-              key={event.id}
-              event={event}
-              top={top}
-              compact={compact}
-              onView={() => onViewEvent(event)}
-              onMenu={() => onEventMenu(event)}
-            />
-          );
-        })}
+        {layoutPins(pins, topOf, height).map((item) => (
+          <AxisPin
+            key={item.event.id}
+            event={item.event}
+            top={item.top}
+            compact={compact}
+            onView={() => onViewEvent(item.event)}
+            onMenu={() => onEventMenu(item.event)}
+          />
+        ))}
 
         {nowTop !== null && nowTop >= 0 && nowTop <= height ? (
           <div
@@ -205,7 +227,7 @@ export function DayColumn({
           </div>
         ) : null}
 
-        {slices.length === 0 && labeled.length === 0 && deadlines.length === 0 ? (
+        {slices.length === 0 && labeled.length === 0 && pins.length === 0 && pending.length === 0 ? (
           <p className="pointer-events-none absolute inset-0 flex items-center justify-center text-[13px] text-muted">
             全天空闲
           </p>
@@ -270,7 +292,26 @@ function EventChip({
   );
 }
 
-function DeadlinePin({
+function layoutPins(
+  pins: RecruitEvent[],
+  topOf: (d: Date) => number,
+  height: number,
+): { event: RecruitEvent; top: number }[] {
+  const sorted = [...pins].sort(
+    (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime(),
+  );
+  const out: { event: RecruitEvent; top: number }[] = [];
+  let last = -999;
+  for (const event of sorted) {
+    let top = Math.min(height - 22, Math.max(0, topOf(new Date(event.start))));
+    if (top - last < 22) top = last + 22;
+    last = top;
+    out.push({ event, top });
+  }
+  return out;
+}
+
+function AxisPin({
   event,
   top,
   compact,
@@ -284,12 +325,18 @@ function DeadlinePin({
   onMenu: () => void;
 }) {
   const press = usePressActions(onView, onMenu);
+  const hm = formatHM(new Date(event.start));
+  const label = isDeadline(event)
+    ? `截止 ${hm} · ${event.company}`
+    : event.type === "exam"
+      ? `开考 ${hm} · ${event.company}`
+      : `开始 ${hm} · ${event.company}`;
   return (
     <button
       type="button"
       data-block
       {...press}
-      className="absolute z-[3] flex items-center gap-1.5 rounded-[10px] bg-[#4a5d8c] px-2 py-0.5 text-left text-white select-none"
+      className={`absolute z-[3] flex items-center gap-1.5 rounded-[10px] px-2 py-0.5 text-left text-white select-none ${TYPE_CLASS[event.type]}`}
       style={{
         top: Math.max(4, top - 11),
         left: 6,
@@ -299,7 +346,7 @@ function DeadlinePin({
     >
       <span className="size-1.5 shrink-0 rounded-full bg-white" />
       <span className={`truncate font-medium ${compact ? "text-[11px]" : "text-[12px]"}`}>
-        截止 {formatHM(new Date(event.start))} · {event.company}
+        {label}
       </span>
     </button>
   );

@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from "react";
 import { loadEvents, saveEvents } from "../lib/storage";
+import { isLegacyPlaceholder, sampleEvents } from "../lib/time";
 import type { RecruitEvent } from "../types";
 
 type State = { events: RecruitEvent[] };
@@ -53,7 +54,7 @@ const EventsContext = createContext<Ctx | null>(null);
 
 export function EventsProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, undefined, () => ({
-    events: loadEvents(),
+    events: bootstrapEvents(),
   }));
 
   const add = useCallback((event: Omit<RecruitEvent, "id">) => {
@@ -81,6 +82,14 @@ export function EventsProvider({ children }: { children: ReactNode }) {
   );
 
   return <EventsContext.Provider value={value}>{children}</EventsContext.Provider>;
+}
+
+function bootstrapEvents(): RecruitEvent[] {
+  const loaded = loadEvents();
+  if (!isLegacyPlaceholder(loaded) && loaded.length > 0) return loaded;
+  const seed = sampleEvents();
+  saveEvents(seed);
+  return seed;
 }
 
 export function useEvents(): Ctx {

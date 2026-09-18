@@ -5,7 +5,10 @@ import {
   eventTouchesDay,
   freeSlotsOnDay,
   hoursWindow,
+  axisPins,
+  isAllDay,
   isDeadline,
+  isOpenStart,
   labeledFrees,
   layoutDayEvents,
   longestFree,
@@ -40,7 +43,10 @@ export function OccupancyBoard({
   onPickTime: (start: Date) => void;
 }) {
   const days = daysForRange(mode, now);
-  const { startHour, endHour } = hoursWindow(events, days);
+  const { startHour, endHour } = hoursWindow(
+    occupancyEvents(events).concat(axisPins(events)),
+    days,
+  );
   const hours = endHour - startHour;
   const hourHeight = HOUR_HEIGHT[mode];
 
@@ -66,7 +72,8 @@ export function OccupancyBoard({
           const occ = occupancyEvents(events);
           const slices = layoutDayEvents(occ, day);
           const frees = freeSlotsOnDay(occ, day, startHour, endHour);
-          const deadlines = events.filter((e) => isDeadline(e) && eventTouchesDay(e, day));
+          const pins = axisPins(events).filter((e) => eventTouchesDay(e, day));
+          const pending = events.filter((e) => isAllDay(e) && eventTouchesDay(e, day));
           return (
             <DayColumn
               key={day.toISOString()}
@@ -75,7 +82,8 @@ export function OccupancyBoard({
               endHour={endHour}
               hourHeight={hourHeight}
               slices={slices}
-              deadlines={deadlines}
+              pins={pins}
+              pending={pending}
               labeled={labeledFrees(frees, mode)}
               mode={mode}
               now={now}
@@ -103,14 +111,18 @@ export function RangeSummary({
 }) {
   const days = daysForRange(mode, now);
   const occ = occupancyEvents(events);
-  const { startHour, endHour } = hoursWindow(occ.concat(events.filter(isDeadline)), days);
+  const { startHour, endHour } = hoursWindow(occ.concat(axisPins(events)), days);
   let eventCount = 0;
   let longest = 0;
   let ddlCount = 0;
+  let openCount = 0;
+  let pendingCount = 0;
   for (const day of days) {
     const slices = layoutDayEvents(occ, day);
     eventCount += slices.length;
     ddlCount += events.filter((e) => isDeadline(e) && eventTouchesDay(e, day)).length;
+    openCount += events.filter((e) => isOpenStart(e) && eventTouchesDay(e, day)).length;
+    pendingCount += events.filter((e) => isAllDay(e) && eventTouchesDay(e, day)).length;
     const longestDay = longestFree(freeSlotsOnDay(occ, day, startHour, endHour));
     if (longestDay) longest = Math.max(longest, longestDay.minutes);
   }
@@ -124,6 +136,18 @@ export function RangeSummary({
         <>
           <span className="mx-2 text-border">·</span>
           {ddlCount} 个截止
+        </>
+      ) : null}
+      {openCount > 0 ? (
+        <>
+          <span className="mx-2 text-border">·</span>
+          {openCount} 个开考
+        </>
+      ) : null}
+      {pendingCount > 0 ? (
+        <>
+          <span className="mx-2 text-border">·</span>
+          {pendingCount} 个待定
         </>
       ) : null}
       <span className="mx-2 text-border">·</span>

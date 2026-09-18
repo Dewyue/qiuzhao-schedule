@@ -1,6 +1,6 @@
 export type EventType = "assessment" | "exam" | "interview" | "jobfair" | "other";
 
-export type EventKind = "slot" | "deadline";
+export type EventKind = "slot" | "deadline" | "allday" | "open";
 
 export type RangeMode = "today" | "upcoming" | "week";
 

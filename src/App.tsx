@@ -74,7 +74,7 @@ export default function App() {
       end: event.end,
       location: event.location ?? "",
       notes: event.notes ?? "",
-      kind: event.kind === "deadline" ? "deadline" : "slot",
+      kind: event.kind ?? "slot",
     };
   }
 

@@ -27,7 +27,7 @@ export function EventForm({
   const initialType = FORM_TYPES.includes(source.type) ? source.type : "interview";
   const [company, setCompany] = useState(source.company);
   const [type, setType] = useState<EventType>(initialType);
-  const [kind, setKind] = useState<EventKind>(source.kind === "deadline" ? "deadline" : "slot");
+  const [kind, setKind] = useState<EventKind>(readKind(source.kind));
   const [title, setTitle] = useState(source.title);
   const [start, setStart] = useState(source.start ? toDatetimeLocal(new Date(source.start)) : "");
   const [end, setEnd] = useState(source.end ? toDatetimeLocal(new Date(source.end)) : "");
@@ -39,7 +39,7 @@ export function EventForm({
     const next = editing ?? draft;
     setCompany(next.company);
     setType(FORM_TYPES.includes(next.type) ? next.type : "interview");
-    setKind(next.kind === "deadline" ? "deadline" : "slot");
+    setKind(readKind(next.kind));
     setTitle(next.title);
     setStart(next.start ? toDatetimeLocal(new Date(next.start)) : "");
     setEnd(next.end ? toDatetimeLocal(new Date(next.end)) : "");
@@ -68,11 +68,11 @@ export function EventForm({
 
   function handleStartChange(value: string) {
     setStart(value);
-    if (type === "interview") {
+    if (type === "interview" && kind === "slot") {
       applyDuration(duration || 60, value);
       return;
     }
-    if (type === "assessment" && kind === "deadline") {
+    if (kind === "deadline" || kind === "open" || kind === "allday") {
       setEnd(value);
       return;
     }
@@ -82,11 +82,14 @@ export function EventForm({
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!company.trim() || !start) return;
-    if (type === "interview" && !title) return;
-    const startDate = new Date(start);
-    const deadline = type === "assessment" && kind === "deadline";
+    let startDate = new Date(start);
+    if (kind === "allday") {
+      startDate = new Date(startDate);
+      startDate.setHours(0, 0, 0, 0);
+    }
+    const marker = kind === "deadline" || kind === "open" || kind === "allday";
     let endDate: Date;
-    if (deadline) {
+    if (marker) {
       endDate = new Date(startDate.getTime() + 60 * 1000);
     } else if (type === "interview" && !end) {
       endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
@@ -100,16 +103,17 @@ export function EventForm({
     onSave({
       company: company.trim(),
       type,
-      title: type === "interview" ? title : deadline ? "截止" : "",
+      title: type === "interview" && kind === "slot" ? title : kind === "deadline" ? "截止" : "",
       start: startDate.toISOString(),
       end: endDate.toISOString(),
       location: showLocation ? location.trim() || undefined : undefined,
       notes: notes.trim() || undefined,
-      kind: deadline ? "deadline" : "slot",
+      kind,
     });
   }
 
-  const timed = type === "exam" || (type === "assessment" && kind === "slot");
+  const timed = (type === "exam" || (type === "assessment" && kind === "slot")) && kind === "slot";
+  const modes = kindModes(type);
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3">
@@ -140,7 +144,8 @@ export function EventForm({
             setType(next);
             if (next !== "interview") setTitle("");
             if (next !== "interview" && next !== "jobfair") setLocation("");
-            if (next !== "assessment") setKind("slot");
+            const allowed = kindModes(next).map((m) => m.id);
+            if (!allowed.includes(kind)) setKind("slot");
             if (next === "interview") applyDuration(duration || 60, start);
           }}
           className={FIELD}
@@ -153,42 +158,32 @@ export function EventForm({
         </select>
       </label>
 
-      {type === "assessment" ? (
+      {modes.length > 1 ? (
         <fieldset className="flex flex-col gap-1">
           <legend className="text-[13px] text-muted">怎么记</legend>
           <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setKind("slot")}
-              className={
-                kind === "slot"
-                  ? "h-10 flex-1 rounded-[12px] bg-accent text-[14px] font-medium text-white"
-                  : "h-10 flex-1 rounded-[12px] bg-surface-muted text-[14px] font-medium"
-              }
-            >
-              限时场次
-            </button>
-            <button
-              type="button"
-              onClick={() => setKind("deadline")}
-              className={
-                kind === "deadline"
-                  ? "h-10 flex-1 rounded-[12px] bg-accent text-[14px] font-medium text-white"
-                  : "h-10 flex-1 rounded-[12px] bg-surface-muted text-[14px] font-medium"
-              }
-            >
-              截止提交
-            </button>
+            {modes.map((mode) => (
+              <button
+                key={mode.id}
+                type="button"
+                onClick={() => setKind(mode.id)}
+                className={
+                  kind === mode.id
+                    ? "h-10 flex-1 rounded-[12px] bg-accent text-[14px] font-medium text-white"
+                    : "h-10 flex-1 rounded-[12px] bg-surface-muted text-[14px] font-medium"
+                }
+              >
+                {mode.label}
+              </button>
+            ))}
           </div>
-          {kind === "deadline" ? (
-            <p className="text-[12px] leading-relaxed text-muted">
-              只记 DDL，不占用当天空闲。时间轴上会在截止时刻打一个标记。
-            </p>
+          {kindHint(kind) ? (
+            <p className="text-[12px] leading-relaxed text-muted">{kindHint(kind)}</p>
           ) : null}
         </fieldset>
       ) : null}
 
-      {type === "interview" ? (
+      {type === "interview" && kind === "slot" ? (
         <fieldset className="flex flex-col gap-1">
           <legend className="text-[13px] text-muted">场次</legend>
           <div className="flex gap-2">
@@ -211,14 +206,15 @@ export function EventForm({
       ) : null}
 
       <label className="flex flex-col gap-1">
-        <span className="text-[13px] text-muted">
-          {type === "assessment" && kind === "deadline" ? "截止时间" : "开始"}
-        </span>
+        <span className="text-[13px] text-muted">{timeLabel(kind, type)}</span>
         <input
-          type="datetime-local"
+          type={kind === "allday" ? "date" : "datetime-local"}
           required
-          value={start}
-          onChange={(e) => handleStartChange(e.target.value)}
+          value={kind === "allday" ? start.slice(0, 10) : start}
+          onChange={(e) => {
+            if (kind === "allday") handleStartChange(`${e.target.value}T00:00`);
+            else handleStartChange(e.target.value);
+          }}
           className={FIELD}
         />
       </label>
@@ -318,6 +314,49 @@ export function EventForm({
       </div>
     </form>
   );
+}
+
+function readKind(kind: EventKind | undefined): EventKind {
+  if (kind === "deadline" || kind === "allday" || kind === "open") return kind;
+  return "slot";
+}
+
+function kindModes(type: EventType): { id: EventKind; label: string }[] {
+  if (type === "assessment") {
+    return [
+      { id: "slot", label: "限时场次" },
+      { id: "deadline", label: "截止提交" },
+    ];
+  }
+  if (type === "exam") {
+    return [
+      { id: "slot", label: "限时场次" },
+      { id: "open", label: "只知开考" },
+      { id: "deadline", label: "截止提交" },
+    ];
+  }
+  if (type === "interview") {
+    return [
+      { id: "slot", label: "已约时段" },
+      { id: "allday", label: "当天待定" },
+      { id: "deadline", label: "截止前" },
+    ];
+  }
+  return [];
+}
+
+function kindHint(kind: EventKind): string {
+  if (kind === "deadline") return "只记 DDL，不占用当天空闲。时间轴上会在截止时刻打一个标记。";
+  if (kind === "open") return "只记开考时刻，不拉色块、不占用空闲。知道时长后再改成限时场次。";
+  if (kind === "allday") return "挂在当天，不铺满时间轴。时间定了再改成已约时段。";
+  return "";
+}
+
+function timeLabel(kind: EventKind, type: EventType): string {
+  if (kind === "deadline") return "截止时间";
+  if (kind === "open") return type === "exam" ? "开考时间" : "开始";
+  if (kind === "allday") return "日期";
+  return "开始";
 }
 
 function minutesBetween(startIso: string, endIso: string): number {

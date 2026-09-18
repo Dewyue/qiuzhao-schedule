@@ -52,7 +52,8 @@ function normalizeEvent(item: unknown, index: number): RecruitEvent {
     throw new Error(`第 ${index + 1} 条缺少有效的公司或时间`);
   }
   const type = TYPES.includes(row.type as EventType) ? (row.type as EventType) : "other";
-  const kind = row.kind === "deadline" ? "deadline" : "slot";
+  const kind =
+    row.kind === "deadline" || row.kind === "allday" || row.kind === "open" ? row.kind : "slot";
   return {
     id: String(row.id ?? crypto.randomUUID()),
     company,
