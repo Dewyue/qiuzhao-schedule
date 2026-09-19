@@ -12,6 +12,28 @@
 - **秋招字段**：测评、笔试、面试（一面/二面/终面）、双选会。DDL、当天待定、只知开考都不去吃空闲。
 - **数据只在本机浏览器**，不登录、不上传；换设备用 JSON 导出/导入。
 
+## 界面
+
+占用和空闲在同一根时间柱上。待定挂在当天，撞车并排标出；点色块看详情，长按编辑或删除。
+
+![今天：占用轴、撞车、当日列表](docs/screenshots/today-occupancy.jpg)
+
+本周从今天起往后七天，窄色块点开浮窗。
+
+![本周色块与场次浮窗](docs/screenshots/week-blocks.jpg)
+
+测评 / 笔试只有截止时，只打标记，不吃空闲。
+
+![明天：截止标记与长按菜单](docs/screenshots/deadline-pins.jpg)
+
+记录按类型裁剪字段：测评、笔试、面试、双选会。
+
+![四种记录表单](docs/screenshots/record-types.jpg)
+
+数据页用整月日历看过去 / 今天 / 以后，关键词搜到哪天哪场，JSON 导出导入。
+
+![数据管理：月历、查找、备份](docs/screenshots/data-month.jpg)
+
 ## 本地开发
 
 ```bash
