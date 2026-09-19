@@ -2,10 +2,13 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useReducer,
+  useRef,
   type ReactNode,
 } from "react";
+import { idbLoadEvents, idbSaveEvents } from "../lib/idb";
 import { loadEvents, saveEvents } from "../lib/storage";
 import type { RecruitEvent } from "../types";
 
@@ -19,6 +22,7 @@ type Action =
 
 function persist(events: RecruitEvent[]): RecruitEvent[] {
   saveEvents(events);
+  void idbSaveEvents(events);
   return events;
 }
 
@@ -53,8 +57,41 @@ const EventsContext = createContext<Ctx | null>(null);
 
 export function EventsProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, undefined, () => ({
-    events: bootstrapEvents(),
+    events: loadEvents(),
   }));
+  const eventsRef = useRef(state.events);
+  eventsRef.current = state.events;
+
+  useEffect(() => {
+    void (async () => {
+      if (navigator.storage?.persist) await navigator.storage.persist();
+      const fromIdb = await idbLoadEvents();
+      const fromLs = loadEvents();
+      if (fromLs.length > 0) {
+        void idbSaveEvents(fromLs);
+        return;
+      }
+      if (fromIdb && fromIdb.length > 0) {
+        dispatch({ type: "replace", events: fromIdb });
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    const flush = () => {
+      saveEvents(eventsRef.current);
+      void idbSaveEvents(eventsRef.current);
+    };
+    const onHide = () => {
+      if (document.visibilityState === "hidden") flush();
+    };
+    window.addEventListener("pagehide", flush);
+    document.addEventListener("visibilitychange", onHide);
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      document.removeEventListener("visibilitychange", onHide);
+    };
+  }, []);
 
   const add = useCallback((event: Omit<RecruitEvent, "id">) => {
     dispatch({
@@ -81,16 +118,6 @@ export function EventsProvider({ children }: { children: ReactNode }) {
   );
 
   return <EventsContext.Provider value={value}>{children}</EventsContext.Provider>;
-}
-
-function bootstrapEvents(): RecruitEvent[] {
-  const loaded = loadEvents();
-  const kept = loaded.filter((e) => {
-    const id = String(e.id);
-    return !id.startsWith("init-") && !id.startsWith("sample-");
-  });
-  if (kept.length !== loaded.length) saveEvents(kept);
-  return kept;
 }
 
 export function useEvents(): Ctx {

@@ -4,6 +4,14 @@ import "./index.css";
 import App from "./App.tsx";
 import { EventsProvider } from "./state/EventsContext.tsx";
 
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    void navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`, {
+      scope: import.meta.env.BASE_URL,
+    });
+  });
+}
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <EventsProvider>

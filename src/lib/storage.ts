@@ -21,7 +21,11 @@ export function loadEvents(): RecruitEvent[] {
 }
 
 export function saveEvents(events: RecruitEvent[]): void {
-  localStorage.setItem(KEY, JSON.stringify(events));
+  try {
+    localStorage.setItem(KEY, JSON.stringify(events));
+  } catch {
+    /* quota / private mode */
+  }
 }
 
 export function toExportPayload(events: RecruitEvent[]): ExportPayload {
