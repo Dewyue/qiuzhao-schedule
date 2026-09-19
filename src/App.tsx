@@ -169,6 +169,7 @@ export default function App() {
               setMenuEvent(null);
               setViewing(event);
             }}
+            onMenu={onEventMenu}
           />
         ) : null}
       </div>

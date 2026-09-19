@@ -10,11 +10,13 @@ export function DataPanel({
   now,
   onImport,
   onView,
+  onMenu,
 }: {
   events: RecruitEvent[];
   now: Date;
   onImport: (events: RecruitEvent[]) => void;
   onView: (event: RecruitEvent) => void;
+  onMenu: (event: RecruitEvent) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -60,7 +62,7 @@ export function DataPanel({
       <div>
         <h2 className="text-[20px] font-semibold tracking-[-0.03em]">数据管理</h2>
         <p className="mt-1 text-[14px] leading-relaxed text-muted">
-          用整月日历看过去、今天和以后；用查找定位到哪一天的哪一场。
+          用整月日历看过去、今天和以后；用查找定位到哪一天的哪一场。点开查看，长按编辑或删除。
         </p>
       </div>
 
@@ -78,9 +80,10 @@ export function DataPanel({
         selected={selected}
         onSelectDay={setSelected}
         onView={onView}
+        onMenu={onMenu}
       />
 
-      <EventSearch events={events} now={now} onView={onView} />
+      <EventSearch events={events} now={now} onView={onView} onMenu={onMenu} />
 
       <div>
         <h3 className="text-[17px] font-semibold tracking-[-0.02em]">备份</h3>

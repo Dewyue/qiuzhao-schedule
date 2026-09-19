@@ -7,10 +7,12 @@ export function EventSearch({
   events,
   now,
   onView,
+  onMenu,
 }: {
   events: RecruitEvent[];
   now: Date;
   onView: (event: RecruitEvent) => void;
+  onMenu: (event: RecruitEvent) => void;
 }) {
   const [query, setQuery] = useState("");
   const [scope, setScope] = useState<"all" | "done" | "open">("all");
@@ -101,7 +103,12 @@ export function EventSearch({
                 <ul className="flex flex-col gap-2">
                   {g.items.map((e) => (
                     <li key={e.id}>
-                      <EventRow event={e} now={now} onView={() => onView(e)} />
+                      <EventRow
+                        event={e}
+                        now={now}
+                        onView={() => onView(e)}
+                        onMenu={() => onMenu(e)}
+                      />
                     </li>
                   ))}
                 </ul>

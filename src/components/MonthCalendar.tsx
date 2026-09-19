@@ -11,6 +11,7 @@ import {
   weekdayLabel,
 } from "../lib/time";
 import type { RecruitEvent } from "../types";
+import { usePressActions } from "../lib/press";
 
 export function MonthCalendar({
   events,
@@ -18,12 +19,14 @@ export function MonthCalendar({
   selected,
   onSelectDay,
   onView,
+  onMenu,
 }: {
   events: RecruitEvent[];
   now: Date;
   selected: Date;
   onSelectDay: (day: Date) => void;
   onView: (event: RecruitEvent) => void;
+  onMenu: (event: RecruitEvent) => void;
 }) {
   const [cursor, setCursor] = useState(() => new Date(now.getFullYear(), now.getMonth(), 1));
   const year = cursor.getFullYear();
@@ -119,7 +122,12 @@ export function MonthCalendar({
           <ul className="mt-2 flex flex-col gap-2">
             {dayEvents.map((e) => (
               <li key={e.id}>
-                <EventRow event={e} now={now} onView={() => onView(e)} />
+                <EventRow
+                  event={e}
+                  now={now}
+                  onView={() => onView(e)}
+                  onMenu={() => onMenu(e)}
+                />
               </li>
             ))}
           </ul>
@@ -133,18 +141,22 @@ export function EventRow({
   event,
   now,
   onView,
+  onMenu,
 }: {
   event: RecruitEvent;
   now: Date;
   onView: () => void;
+  onMenu: () => void;
 }) {
   const status = eventStatus(event, now);
   const label = status === "done" ? "已完成" : status === "live" ? "进行中" : "未完成";
+  const press = usePressActions(onView, onMenu);
   return (
     <button
       type="button"
-      onClick={onView}
-      className="flex w-full items-start justify-between gap-3 rounded-[16px] bg-surface-muted px-4 py-3 text-left"
+      {...press}
+      className="flex w-full items-start justify-between gap-3 rounded-[16px] bg-surface-muted px-4 py-3 text-left select-none hover:bg-[#ececf0]"
+      style={{ touchAction: "manipulation" }}
     >
       <div className="min-w-0">
         <p className="truncate text-[15px] font-semibold tracking-[-0.02em]">{event.company}</p>
