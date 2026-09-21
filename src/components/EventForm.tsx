@@ -64,7 +64,8 @@ export function EventForm({
   const timedSlot =
     kind === "slot" && (type === "exam" || type === "assessment" || type === "interview");
   const timedDeadline =
-    kind === "deadline" && (type === "assessment" || type === "exam");
+    kind === "deadline" &&
+    (type === "assessment" || type === "exam" || type === "interview");
   const modes = kindModes(type);
 
   function applyDurationForward(mins: number, startLocal: string) {
@@ -104,10 +105,6 @@ export function EventForm({
       return;
     }
     if (kind === "open" || kind === "allday") {
-      setEnd(value);
-      return;
-    }
-    if (kind === "deadline" && !timedDeadline) {
       setEnd(value);
       return;
     }
@@ -153,6 +150,7 @@ export function EventForm({
         start: startDate.toISOString(),
         end: endDate.toISOString(),
         deadline: due.toISOString(),
+        location: type === "interview" ? location.trim() || undefined : undefined,
         notes: notes.trim() || undefined,
         kind: "deadline",
       });
@@ -224,7 +222,10 @@ export function EventForm({
             if (next === "interview" && nextKind === "slot") {
               applyDurationForward(duration || 60, start);
             }
-            if ((next === "assessment" || next === "exam") && nextKind === "deadline") {
+            if (
+              (next === "assessment" || next === "exam" || next === "interview") &&
+              nextKind === "deadline"
+            ) {
               const due = deadline || end || start;
               if (due) syncFromDeadline(due, duration >= 10 ? duration : DEFAULT_DDL_MINUTES);
               else setDuration(DEFAULT_DDL_MINUTES);
@@ -249,7 +250,10 @@ export function EventForm({
                 key={mode.id}
                 type="button"
                 onClick={() => {
-                  if (mode.id === "deadline" && (type === "assessment" || type === "exam")) {
+                  if (
+                    mode.id === "deadline" &&
+                    (type === "assessment" || type === "exam" || type === "interview")
+                  ) {
                     enterDeadlineMode();
                     return;
                   }
@@ -473,7 +477,10 @@ function initialFields(source: Draft): {
   const endLocal = source.end ? toDatetimeLocal(new Date(source.end)) : "";
   const mins = minutesBetween(source.start, source.end);
 
-  if (kind === "deadline" && (source.type === "assessment" || source.type === "exam")) {
+  if (
+    kind === "deadline" &&
+    (source.type === "assessment" || source.type === "exam" || source.type === "interview")
+  ) {
     const dueIso = source.deadline || (mins > 2 ? source.end : source.start);
     const dueLocal = dueIso ? toDatetimeLocal(new Date(dueIso)) : "";
     const duration = mins > 2 ? mins : DEFAULT_DDL_MINUTES;

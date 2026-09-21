@@ -21,7 +21,13 @@ export function EventDetail({
       >
         <p className="text-[13px] font-medium text-accent">
           {TYPE_LABEL[event.type]}
-          {event.kind === "deadline" ? " · 截止提交" : event.title ? ` · ${event.title}` : ""}
+          {event.kind === "deadline"
+            ? event.type === "interview"
+              ? " · 截止前"
+              : " · 截止提交"
+            : event.title
+              ? ` · ${event.title}`
+              : ""}
         </p>
         <h2 id="event-detail-title" className="mt-1 text-[22px] font-semibold tracking-[-0.03em]">
           {event.company}
