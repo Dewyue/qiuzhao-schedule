@@ -34,7 +34,26 @@ export function isOpenStart(event: Pick<RecruitEvent, "kind">): boolean {
   return eventKind(event) === "open";
 }
 
-/** Move a block by snapped minutes. Duration stays; occupying deadlines keep their cutoff. */
+/** Pixel offset for a drag, clamped so the block stays on this day. */
+export function dragOffsetPx(
+  event: Pick<RecruitEvent, "start" | "end">,
+  dy: number,
+  pxPerMinute: number,
+  day: Date,
+): number {
+  if (!(pxPerMinute > 0)) return 0;
+  const startMs = new Date(event.start).getTime();
+  const endMs = new Date(event.end).getTime();
+  const dur = Math.max(endMs - startMs, 60_000);
+  const day0 = startOfDay(day).getTime();
+  const day1 = addDays(startOfDay(day), 1).getTime();
+  let next = startMs + (dy / pxPerMinute) * 60_000;
+  if (next < day0) next = day0;
+  if (dur < day1 - day0 && next + dur > day1) next = day1 - dur;
+  return ((next - startMs) / 60_000) * pxPerMinute;
+}
+
+/** Move a block by whole minutes. Duration stays; occupying deadlines keep their cutoff. */
 export function shiftEvent(event: RecruitEvent, deltaMin: number, day: Date): RecruitEvent {
   if (!deltaMin) return event;
   const startMs = new Date(event.start).getTime();

@@ -8,6 +8,7 @@ import {
   isDeadline,
   isSameDay,
   mergeBusy,
+  dragOffsetPx,
   shiftEvent,
   TYPE_LABEL,
   weekdayLabel,
@@ -293,9 +294,11 @@ function EventChip({
   onView: () => void;
   onShift: (deltaMin: number) => void;
 }) {
-  const { live, deltaMin, bind } = useBlockDrag(pxPerMinute, onView, onShift);
-  const moved = shiftEvent(slice.event, deltaMin, day);
-  const dy = ((new Date(moved.start).getTime() - slice.start.getTime()) / 60_000) * pxPerMinute;
+  const { live, offsetPx, bind } = useBlockDrag(pxPerMinute, onView, onShift, (dy) =>
+    dragOffsetPx(slice.event, dy, pxPerMinute, day),
+  );
+  const previewMin = pxPerMinute > 0 ? Math.round(offsetPx / pxPerMinute) : 0;
+  const moved = shiftEvent(slice.event, previewMin, day);
   const timeLabel = `${formatHM(new Date(moved.start))}–${formatHM(new Date(moved.end))}`;
   if (compact) {
     return (
@@ -312,7 +315,8 @@ function EventChip({
           height: Math.max(8, height - 2),
           left: `calc(${slice.lane * widthPct}% + 2px)`,
           width: `calc(${widthPct}% - 4px)`,
-          transform: dy ? `translateY(${dy}px)` : undefined,
+          transform: offsetPx ? `translateY(${offsetPx}px)` : undefined,
+          transition: "none",
           touchAction: live ? "none" : "pan-y",
         }}
       />
@@ -331,7 +335,8 @@ function EventChip({
           height: height - 4,
           left: `calc(${slice.lane * widthPct}% + 6px)`,
           width: `calc(${widthPct}% - 10px)`,
-          transform: dy ? `translateY(${dy}px)` : undefined,
+          transform: offsetPx ? `translateY(${offsetPx}px)` : undefined,
+          transition: "none",
           touchAction: live ? "none" : "pan-y",
         }}
     >
@@ -395,9 +400,11 @@ function AxisPin({
   onView: () => void;
   onShift: (deltaMin: number) => void;
 }) {
-  const { live, deltaMin, bind } = useBlockDrag(pxPerMinute, onView, onShift);
-  const moved = shiftEvent(event, deltaMin, day);
-  const dy = ((new Date(moved.start).getTime() - new Date(event.start).getTime()) / 60_000) * pxPerMinute;
+  const { live, offsetPx, bind } = useBlockDrag(pxPerMinute, onView, onShift, (dy) =>
+    dragOffsetPx(event, dy, pxPerMinute, day),
+  );
+  const previewMin = pxPerMinute > 0 ? Math.round(offsetPx / pxPerMinute) : 0;
+  const moved = shiftEvent(event, previewMin, day);
   const at = pinAt(moved);
   const hm = formatHM(at);
   const label = isDeadline(event)
@@ -418,7 +425,8 @@ function AxisPin({
           height: 6,
           left: 2,
           right: 2,
-          transform: dy ? `translateY(${dy}px)` : undefined,
+          transform: offsetPx ? `translateY(${offsetPx}px)` : undefined,
+          transition: "none",
           touchAction: live ? "none" : "pan-y",
         }}
       />
@@ -434,7 +442,8 @@ function AxisPin({
         top: Math.max(4, top - 11),
         left: 6,
         right: 6,
-        transform: dy ? `translateY(${dy}px)` : undefined,
+        transform: offsetPx ? `translateY(${offsetPx}px)` : undefined,
+        transition: "none",
         touchAction: live ? "none" : "pan-y",
       }}
     >

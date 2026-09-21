@@ -3,15 +3,15 @@ import { useEffect, useRef, useState } from "react";
 
 const HOLD_MS = 320;
 const SLOP = 8;
-const SNAP = 15;
 
 export function useBlockDrag(
   pxPerMinute: number,
   onTap: () => void,
   onCommit: (deltaMin: number) => void,
+  clampPx: (dy: number) => number = (dy) => dy,
 ) {
   const [live, setLive] = useState(false);
-  const [deltaMin, setDeltaMin] = useState(0);
+  const [offsetPx, setOffsetPx] = useState(0);
   const drag = useRef({
     id: -1,
     x: 0,
@@ -20,8 +20,12 @@ export function useBlockDrag(
     holding: false,
     moved: false,
     suppress: false,
+    px: 0,
     mins: 0,
+    shown: 0,
   });
+  const clampRef = useRef(clampPx);
+  clampRef.current = clampPx;
   const commitRef = useRef(onCommit);
   commitRef.current = onCommit;
 
@@ -35,7 +39,9 @@ export function useBlockDrag(
   }, [live]);
 
   useEffect(() => {
-    return () => window.clearTimeout(drag.current.timer);
+    return () => {
+      window.clearTimeout(drag.current.timer);
+    };
   }, []);
 
   function clearTimer() {
@@ -52,9 +58,11 @@ export function useBlockDrag(
     s.holding = false;
     s.id = -1;
     s.mins = 0;
+    s.px = 0;
+    s.shown = 0;
     if (!held) return;
     setLive(false);
-    setDeltaMin(0);
+    setOffsetPx(0);
     s.suppress = true;
     window.setTimeout(() => {
       s.suppress = false;
@@ -72,6 +80,7 @@ export function useBlockDrag(
     s.holding = false;
     s.moved = false;
     s.mins = 0;
+    s.px = 0;
     clearTimer();
     const target = e.currentTarget as HTMLElement;
     const pointerId = e.pointerId;
@@ -88,9 +97,15 @@ export function useBlockDrag(
         return;
       }
       ev.preventDefault();
-      const mins = pxPerMinute > 0 ? Math.round(dy / pxPerMinute / SNAP) * SNAP : 0;
-      s.mins = mins;
-      setDeltaMin(mins);
+      const px = clampRef.current(dy);
+      s.px = px;
+      s.mins = pxPerMinute > 0 ? Math.round(px / pxPerMinute) : 0;
+      target.style.transition = "none";
+      target.style.transform = px ? `translateY(${px}px)` : "";
+      if (s.mins !== s.shown) {
+        s.shown = s.mins;
+        setOffsetPx(px);
+      }
     }
 
     function onUp(ev: PointerEvent) {
@@ -109,7 +124,7 @@ export function useBlockDrag(
       if (s.id !== pointerId) return;
       s.holding = true;
       setLive(true);
-      setDeltaMin(0);
+      setOffsetPx(0);
       try {
         target.setPointerCapture(pointerId);
       } catch {
@@ -138,7 +153,7 @@ export function useBlockDrag(
 
   return {
     live,
-    deltaMin,
+    offsetPx,
     bind: {
       onPointerDown,
       onClick,
