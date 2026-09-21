@@ -58,13 +58,23 @@ function normalizeEvent(item: unknown, index: number): RecruitEvent {
   const type = TYPES.includes(row.type as EventType) ? (row.type as EventType) : "other";
   const kind =
     row.kind === "deadline" || row.kind === "allday" || row.kind === "open" ? row.kind : "slot";
+  const startIso = new Date(start).toISOString();
+  const endIso = new Date(end).toISOString();
+  let deadline: string | undefined;
+  if (row.deadline && !Number.isNaN(new Date(String(row.deadline)).getTime())) {
+    deadline = new Date(String(row.deadline)).toISOString();
+  } else if (kind === "deadline") {
+    const span = new Date(endIso).getTime() - new Date(startIso).getTime();
+    deadline = span > 2 * 60_000 ? endIso : startIso;
+  }
   return {
     id: String(row.id ?? crypto.randomUUID()),
     company,
     type,
     title: String(row.title ?? ""),
-    start: new Date(start).toISOString(),
-    end: new Date(end).toISOString(),
+    start: startIso,
+    end: endIso,
+    deadline,
     location: row.location ? String(row.location) : undefined,
     notes: row.notes ? String(row.notes) : undefined,
     kind,

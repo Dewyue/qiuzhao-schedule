@@ -11,6 +11,8 @@ export type RecruitEvent = {
   title: string;
   start: string;
   end: string;
+  /** Company-stated cutoff; separate from the occupied end when plans move. */
+  deadline?: string;
   location?: string;
   notes?: string;
   kind?: EventKind;

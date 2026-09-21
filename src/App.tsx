@@ -32,6 +32,7 @@ export default function App() {
       location: "",
       notes: "",
       kind: "slot",
+      deadline: undefined,
     };
   }
 
@@ -75,6 +76,7 @@ export default function App() {
       location: event.location ?? "",
       notes: event.notes ?? "",
       kind: event.kind ?? "slot",
+      deadline: event.deadline,
     };
   }
 

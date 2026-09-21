@@ -49,30 +49,30 @@ export function occupancyEvents(events: RecruitEvent[]): RecruitEvent[] {
 export function axisPins(events: RecruitEvent[]): RecruitEvent[] {
   return events.filter((e) => {
     if (isOpenStart(e)) return true;
-    // Marker-only DDL (no real duration) stays a pin; ranged DDL is an occupancy block.
     return isDeadline(e) && !occupiesTime(e);
   });
 }
 
-export function deadlineMoment(event: Pick<RecruitEvent, "kind" | "start" | "end">): Date {
+export function deadlineMoment(
+  event: Pick<RecruitEvent, "kind" | "start" | "end" | "deadline">,
+): Date {
   if (!isDeadline(event)) return new Date(event.start);
+  if (event.deadline && !Number.isNaN(new Date(event.deadline).getTime())) {
+    return new Date(event.deadline);
+  }
   const start = new Date(event.start);
   const end = new Date(event.end);
   const mins = Math.round((end.getTime() - start.getTime()) / 60_000);
-  // Old imports used a 1-minute marker at start; newer ones pin at end.
   if (mins > 2) return end;
   return start;
 }
 
 export function formatEventSpan(event: RecruitEvent): string {
   if (isDeadline(event)) {
-    const due = deadlineMoment(event);
-    const start = new Date(event.start);
-    const spanMins = Math.round((due.getTime() - start.getTime()) / 60_000);
-    if (spanMins > 2) {
-      return `${formatHM(start)}–截止 ${formatHM(due)}`;
+    if (occupiesTime(event)) {
+      return `${formatHM(new Date(event.start))}–${formatHM(new Date(event.end))}`;
     }
-    return `截止 ${formatHM(due)}`;
+    return `截止 ${formatHM(deadlineMoment(event))}`;
   }
   if (isAllDay(event)) return "当天 · 时间待定";
   if (isOpenStart(event)) {
@@ -147,9 +147,13 @@ export function eventStatus(event: RecruitEvent, now = new Date()): EventStatus 
     }
     const due = deadlineMoment(event).getTime();
     const start = new Date(event.start).getTime();
-    if (due <= t) return "done";
-    if (occupiesTime(event) && start <= t) return "live";
-    return "upcoming";
+    const end = new Date(event.end).getTime();
+    if (occupiesTime(event)) {
+      if (end <= t) return "done";
+      if (start <= t) return "live";
+      return "upcoming";
+    }
+    return due <= t ? "done" : "upcoming";
   }
   if (isOpenStart(event)) {
     const start = new Date(event.start).getTime();

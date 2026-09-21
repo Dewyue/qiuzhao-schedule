@@ -28,11 +28,11 @@ export function EventDetail({
         </h2>
         <p className="mt-3 text-[15px] tabular-nums text-muted">
           {new Date(event.start).getMonth() + 1}月{new Date(event.start).getDate()}日{" "}
-          {rangedDeadline && due
-            ? `${formatHM(new Date(event.start))}–${formatHM(due)}`
+          {rangedDeadline
+            ? `${formatHM(new Date(event.start))}–${formatHM(new Date(event.end))}`
             : formatEventSpan(event)}
         </p>
-        {rangedDeadline && due ? (
+        {isDeadline(event) && due ? (
           <p className="mt-2 text-[15px] tabular-nums">
             截止 {due.getMonth() + 1}月{due.getDate()}日 {formatHM(due)}
           </p>

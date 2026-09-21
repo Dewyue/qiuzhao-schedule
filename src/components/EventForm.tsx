@@ -32,6 +32,7 @@ export function EventForm({
   const [title, setTitle] = useState(source.title);
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
+  const [deadline, setDeadline] = useState("");
   const [location, setLocation] = useState(source.location ?? "");
   const [notes, setNotes] = useState(source.notes ?? "");
   const [duration, setDuration] = useState(0);
@@ -47,6 +48,7 @@ export function EventForm({
     setTitle(next.title);
     setStart(range.start);
     setEnd(range.end);
+    setDeadline(range.deadline);
     setLocation(next.location ?? "");
     setNotes(next.notes ?? "");
     setDuration(range.duration);
@@ -76,18 +78,25 @@ export function EventForm({
     setEnd(toDatetimeLocal(new Date(s.getTime() + mins * 60_000)));
   }
 
-  function applyDurationBack(mins: number, deadlineLocal: string) {
+  /** From deadline: start = due - duration, end = due. */
+  function syncFromDeadline(dueLocal: string, mins: number) {
+    const due = new Date(dueLocal);
+    if (Number.isNaN(due.getTime()) || !mins) return;
+    setDeadline(dueLocal);
     setDuration(mins);
-    if (!deadlineLocal || !mins) return;
-    const due = new Date(deadlineLocal);
-    if (Number.isNaN(due.getTime())) return;
+    setEnd(dueLocal);
     setStart(toDatetimeLocal(new Date(due.getTime() - mins * 60_000)));
   }
 
   function handleStartChange(value: string) {
     setStart(value);
     if (timedDeadline) {
-      if (end) setDuration(minutesBetween(value, end));
+      const mins = duration || DEFAULT_DDL_MINUTES;
+      setDuration(mins);
+      const s = new Date(value);
+      if (!Number.isNaN(s.getTime())) {
+        setEnd(toDatetimeLocal(new Date(s.getTime() + mins * 60_000)));
+      }
       return;
     }
     if (type === "interview" && kind === "slot") {
@@ -106,16 +115,25 @@ export function EventForm({
   }
 
   function handleDeadlineChange(value: string) {
-    setEnd(value);
-    applyDurationBack(duration || DEFAULT_DDL_MINUTES, value);
+    syncFromDeadline(value, duration || DEFAULT_DDL_MINUTES);
+  }
+
+  function handleDurationForDeadline(mins: number) {
+    if (deadline) {
+      syncFromDeadline(deadline, mins);
+      return;
+    }
+    setDuration(mins);
   }
 
   function enterDeadlineMode() {
     setKind("deadline");
-    const due = end || start;
-    if (!due) return;
-    setEnd(due);
-    applyDurationBack(duration >= 10 ? duration : DEFAULT_DDL_MINUTES, due);
+    const due = deadline || end || start;
+    if (!due) {
+      setDuration(DEFAULT_DDL_MINUTES);
+      return;
+    }
+    syncFromDeadline(due, duration >= 10 ? duration : DEFAULT_DDL_MINUTES);
   }
 
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
@@ -123,18 +141,18 @@ export function EventForm({
     if (!company.trim()) return;
 
     if (timedDeadline) {
-      if (!end || !start) return;
-      const due = new Date(end);
-      let startDate = new Date(start);
-      if (!(due.getTime() > startDate.getTime())) {
-        startDate = new Date(due.getTime() - (duration || DEFAULT_DDL_MINUTES) * 60_000);
-      }
+      if (!deadline || !start || !end) return;
+      const due = new Date(deadline);
+      const startDate = new Date(start);
+      const endDate = new Date(end);
+      if (Number.isNaN(due.getTime()) || !(endDate.getTime() > startDate.getTime())) return;
       onSave({
         company: company.trim(),
         type,
         title: "截止",
         start: startDate.toISOString(),
-        end: due.toISOString(),
+        end: endDate.toISOString(),
+        deadline: due.toISOString(),
         notes: notes.trim() || undefined,
         kind: "deadline",
       });
@@ -164,6 +182,7 @@ export function EventForm({
       title: type === "interview" && kind === "slot" ? title : kind === "deadline" ? "截止" : "",
       start: startDate.toISOString(),
       end: endDate.toISOString(),
+      deadline: kind === "deadline" ? startDate.toISOString() : undefined,
       location: showLocation ? location.trim() || undefined : undefined,
       notes: notes.trim() || undefined,
       kind,
@@ -206,8 +225,9 @@ export function EventForm({
               applyDurationForward(duration || 60, start);
             }
             if ((next === "assessment" || next === "exam") && nextKind === "deadline") {
-              const due = end || start;
-              if (due) applyDurationBack(duration >= 10 ? duration : DEFAULT_DDL_MINUTES, due);
+              const due = deadline || end || start;
+              if (due) syncFromDeadline(due, duration >= 10 ? duration : DEFAULT_DDL_MINUTES);
+              else setDuration(DEFAULT_DDL_MINUTES);
             }
           }}
           className={FIELD}
@@ -285,19 +305,18 @@ export function EventForm({
             <input
               type="datetime-local"
               required
-              value={end}
+              value={deadline}
               onChange={(e) => handleDeadlineChange(e.target.value)}
               className={FIELD}
             />
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-[13px] text-muted">时长</span>
+            <span className="text-[13px] text-muted">默认时长</span>
             <select
-              value={duration || ""}
-              onChange={(e) => applyDurationBack(Number(e.target.value), end)}
+              value={duration || DEFAULT_DDL_MINUTES}
+              onChange={(e) => handleDurationForDeadline(Number(e.target.value))}
               className={FIELD}
             >
-              <option value="">先选时长</option>
               {durationOptions.map((mins) => (
                 <option key={mins} value={mins}>
                   {labelDuration(mins)}
@@ -306,12 +325,25 @@ export function EventForm({
             </select>
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-[13px] text-muted">开始</span>
+            <span className="text-[13px] text-muted">开始时间</span>
             <input
               type="datetime-local"
               required
               value={start}
               onChange={(e) => handleStartChange(e.target.value)}
+              className={FIELD}
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-[13px] text-muted">结束时间</span>
+            <input
+              type="datetime-local"
+              required
+              value={end}
+              onChange={(e) => {
+                setEnd(e.target.value);
+                setDuration(minutesBetween(start, e.target.value) || duration);
+              }}
               className={FIELD}
             />
           </label>
@@ -430,25 +462,34 @@ export function EventForm({
   );
 }
 
-function initialFields(source: Draft): { start: string; end: string; duration: number } {
+function initialFields(source: Draft): {
+  start: string;
+  end: string;
+  deadline: string;
+  duration: number;
+} {
   const kind = readKind(source.kind);
   const startLocal = source.start ? toDatetimeLocal(new Date(source.start)) : "";
   const endLocal = source.end ? toDatetimeLocal(new Date(source.end)) : "";
   const mins = minutesBetween(source.start, source.end);
 
   if (kind === "deadline" && (source.type === "assessment" || source.type === "exam")) {
-    const due =
-      mins > 2 && source.end
-        ? endLocal
-        : startLocal;
+    const dueIso = source.deadline || (mins > 2 ? source.end : source.start);
+    const dueLocal = dueIso ? toDatetimeLocal(new Date(dueIso)) : "";
     const duration = mins > 2 ? mins : DEFAULT_DDL_MINUTES;
-    const start =
-      mins > 2 && startLocal
-        ? startLocal
-        : due
-          ? toDatetimeLocal(new Date(new Date(due).getTime() - duration * 60_000))
-          : "";
-    return { start, end: due, duration };
+    if (mins > 2 && startLocal && endLocal) {
+      return { start: startLocal, end: endLocal, deadline: dueLocal, duration };
+    }
+    if (dueLocal) {
+      const due = new Date(dueLocal);
+      return {
+        deadline: dueLocal,
+        duration,
+        end: dueLocal,
+        start: toDatetimeLocal(new Date(due.getTime() - duration * 60_000)),
+      };
+    }
+    return { start: "", end: "", deadline: "", duration: DEFAULT_DDL_MINUTES };
   }
 
   if (source.type === "interview" && kind === "slot" && mins < 10 && source.start) {
@@ -456,10 +497,11 @@ function initialFields(source: Draft): { start: string; end: string; duration: n
       start: startLocal,
       duration: 60,
       end: toDatetimeLocal(new Date(new Date(source.start).getTime() + 60 * 60_000)),
+      deadline: "",
     };
   }
 
-  return { start: startLocal, end: endLocal, duration: mins };
+  return { start: startLocal, end: endLocal, deadline: "", duration: mins };
 }
 
 function readKind(kind: EventKind | undefined): EventKind {
@@ -493,7 +535,7 @@ function kindModes(type: EventType): { id: EventKind; label: string }[] {
 
 function kindHint(kind: EventKind, timedDeadline: boolean): string {
   if (timedDeadline) {
-    return "先填截止，再填时长；开始默认从截止往前倒推。这段会占用空闲，截止时刻仍写在时间上。";
+    return "截止是属性。默认时长半小时：开始从截止往前倒推，结束先与截止相同。改开始时时长不变，结束跟着更新；色块按开始到结束占格。";
   }
   if (kind === "deadline") return "只记 DDL，不占用当天空闲。时间轴上会在截止时刻打一个标记。";
   if (kind === "open") return "只记开考时刻，不拉色块、不占用空闲。知道时长后再改成限时场次。";
