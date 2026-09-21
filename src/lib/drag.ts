@@ -1,8 +1,7 @@
 import type { MouseEvent, PointerEvent as ReactPointerEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 
-const HOLD_MS = 320;
-const SLOP = 8;
+const HOLD_MS = 200;
 
 export function useBlockDrag(
   pxPerMinute: number,
@@ -11,126 +10,179 @@ export function useBlockDrag(
   clampPx: (dy: number) => number = (dy) => dy,
 ) {
   const [live, setLive] = useState(false);
-  const [offsetPx, setOffsetPx] = useState(0);
+  const [previewMin, setPreviewMin] = useState(0);
   const drag = useRef({
     id: -1,
-    x: 0,
     y: 0,
     timer: 0,
-    holding: false,
-    moved: false,
+    active: false,
     suppress: false,
     px: 0,
     mins: 0,
     shown: 0,
+    target: null as HTMLElement | null,
+    unbind: null as (() => void) | null,
   });
   const clampRef = useRef(clampPx);
   clampRef.current = clampPx;
   const commitRef = useRef(onCommit);
   commitRef.current = onCommit;
+  const pxRef = useRef(pxPerMinute);
+  pxRef.current = pxPerMinute;
 
   useEffect(() => {
     if (!live) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const html = document.documentElement;
+    const body = document.body;
+    const prev = {
+      htmlOverflow: html.style.overflow,
+      bodyOverflow: body.style.overflow,
+      htmlTouch: html.style.touchAction,
+      bodyTouch: body.style.touchAction,
+      overscroll: body.style.overscrollBehavior,
+    };
+    html.style.overflow = "hidden";
+    body.style.overflow = "hidden";
+    html.style.touchAction = "none";
+    body.style.touchAction = "none";
+    body.style.overscrollBehavior = "none";
+
+    const blockScroll = (e: Event) => {
+      e.preventDefault();
+    };
+    document.addEventListener("touchmove", blockScroll, { passive: false });
+    document.addEventListener("wheel", blockScroll, { passive: false });
+
     return () => {
-      document.body.style.overflow = prev;
+      html.style.overflow = prev.htmlOverflow;
+      body.style.overflow = prev.bodyOverflow;
+      html.style.touchAction = prev.htmlTouch;
+      body.style.touchAction = prev.bodyTouch;
+      body.style.overscrollBehavior = prev.overscroll;
+      document.removeEventListener("touchmove", blockScroll);
+      document.removeEventListener("wheel", blockScroll);
     };
   }, [live]);
 
   useEffect(() => {
     return () => {
       window.clearTimeout(drag.current.timer);
+      drag.current.unbind?.();
     };
   }, []);
 
-  function clearTimer() {
-    window.clearTimeout(drag.current.timer);
-    drag.current.timer = 0;
+  function paint(target: HTMLElement, px: number) {
+    target.style.setProperty("transition", "none", "important");
+    target.style.transform = px ? `translate3d(0, ${px}px, 0)` : "";
+  }
+
+  function activate() {
+    const s = drag.current;
+    if (s.active || !s.target) return;
+    s.active = true;
+    setLive(true);
+    setPreviewMin(0);
+    paint(s.target, 0);
+    if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(10);
   }
 
   function finish(pointerId: number) {
     const s = drag.current;
     if (s.id !== pointerId) return;
-    clearTimer();
-    const held = s.holding;
+    window.clearTimeout(s.timer);
+    s.timer = 0;
+    s.unbind?.();
+    s.unbind = null;
+
+    const wasActive = s.active;
     const mins = s.mins;
-    s.holding = false;
+    const target = s.target;
+    s.active = false;
     s.id = -1;
     s.mins = 0;
     s.px = 0;
     s.shown = 0;
-    if (!held) return;
+    s.target = null;
+
+    if (target) {
+      target.style.removeProperty("transition");
+      target.style.transform = "";
+      try {
+        target.releasePointerCapture(pointerId);
+      } catch {
+        /* already released */
+      }
+    }
+
+    if (!wasActive) return;
     setLive(false);
-    setOffsetPx(0);
+    setPreviewMin(0);
     s.suppress = true;
     window.setTimeout(() => {
       s.suppress = false;
-    }, 400);
+    }, 320);
     if (mins !== 0) commitRef.current(mins);
   }
 
   function onPointerDown(e: ReactPointerEvent) {
     if (e.pointerType === "mouse" && e.button !== 0) return;
+    e.stopPropagation();
+
     const s = drag.current;
+    s.unbind?.();
+    window.clearTimeout(s.timer);
+
     s.suppress = false;
     s.id = e.pointerId;
-    s.x = e.clientX;
     s.y = e.clientY;
-    s.holding = false;
-    s.moved = false;
+    s.active = false;
     s.mins = 0;
     s.px = 0;
-    clearTimer();
+    s.shown = 0;
+
     const target = e.currentTarget as HTMLElement;
     const pointerId = e.pointerId;
+    s.target = target;
+
+    try {
+      target.setPointerCapture(pointerId);
+    } catch {
+      /* already released */
+    }
 
     function onMove(ev: PointerEvent) {
       if (ev.pointerId !== pointerId) return;
-      const dx = ev.clientX - s.x;
-      const dy = ev.clientY - s.y;
-      if (!s.holding) {
-        if (Math.hypot(dx, dy) > SLOP) {
-          clearTimer();
-          s.moved = true;
-        }
-        return;
-      }
+      // Own the gesture for the whole press so the page cannot scroll.
       ev.preventDefault();
-      const px = clampRef.current(dy);
+      if (!s.active) return;
+      const px = clampRef.current(ev.clientY - s.y);
       s.px = px;
-      s.mins = pxPerMinute > 0 ? Math.round(px / pxPerMinute) : 0;
-      target.style.transition = "none";
-      target.style.transform = px ? `translateY(${px}px)` : "";
+      const ppm = pxRef.current;
+      s.mins = ppm > 0 ? Math.round(px / ppm) : 0;
+      paint(target, px);
       if (s.mins !== s.shown) {
         s.shown = s.mins;
-        setOffsetPx(px);
+        setPreviewMin(s.mins);
       }
     }
 
     function onUp(ev: PointerEvent) {
       if (ev.pointerId !== pointerId) return;
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
-      window.removeEventListener("pointercancel", onUp);
       finish(pointerId);
     }
 
     window.addEventListener("pointermove", onMove, { passive: false });
     window.addEventListener("pointerup", onUp);
     window.addEventListener("pointercancel", onUp);
+    s.unbind = () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+    };
 
     s.timer = window.setTimeout(() => {
       if (s.id !== pointerId) return;
-      s.holding = true;
-      setLive(true);
-      setOffsetPx(0);
-      try {
-        target.setPointerCapture(pointerId);
-      } catch {
-        /* pointer already released */
-      }
-      if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(12);
+      activate();
     }, HOLD_MS);
   }
 
@@ -138,9 +190,8 @@ export function useBlockDrag(
     e.stopPropagation();
     e.preventDefault();
     const s = drag.current;
-    if (s.suppress || s.holding || s.moved) {
+    if (s.suppress || s.active) {
       s.suppress = false;
-      s.moved = false;
       return;
     }
     onTap();
@@ -153,7 +204,7 @@ export function useBlockDrag(
 
   return {
     live,
-    offsetPx,
+    previewMin,
     bind: {
       onPointerDown,
       onClick,

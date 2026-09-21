@@ -44,9 +44,16 @@
   input,
   select,
   textarea {
-    transition-property: color, background-color, border-color, opacity, transform, box-shadow;
+    transition-property: color, background-color, border-color, opacity, box-shadow;
     transition-duration: 250ms;
     transition-timing-function: cubic-bezier(0.25, 0.1, 0.25, 1);
+  }
+
+  [data-block] {
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
   }
 
   button:focus-visible,
