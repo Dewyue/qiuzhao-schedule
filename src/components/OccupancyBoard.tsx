@@ -69,7 +69,7 @@ export function OccupancyBoard({
             style={{ height: i === hours ? 0 : hourHeight }}
           >
             <span className="absolute right-0.5 -translate-y-1/2 tabular-nums">
-              {String(startHour + i).padStart(2, "0")}
+              {startHour + i >= 24 ? "24" : String(startHour + i).padStart(2, "0")}
             </span>
           </div>
         ))}

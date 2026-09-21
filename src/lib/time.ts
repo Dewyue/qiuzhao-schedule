@@ -1,7 +1,7 @@
 import type { EventSlice, FreeSlot, RangeMode, RecruitEvent } from "../types";
 
-export const DEFAULT_START_HOUR = 8;
-export const DEFAULT_END_HOUR = 22;
+export const DEFAULT_START_HOUR = 6;
+export const DEFAULT_END_HOUR = 24;
 
 export const TYPE_LABEL: Record<RecruitEvent["type"], string> = {
   assessment: "测评",

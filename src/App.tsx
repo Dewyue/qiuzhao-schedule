@@ -81,8 +81,8 @@ export default function App() {
       <div
         className={
           tab === "schedule"
-            ? "flex w-full flex-col gap-3 px-2 pb-24 pt-3"
-            : "mx-auto flex max-w-[1400px] flex-col gap-4 px-5 pb-24 pt-4 lg:px-8"
+            ? "flex w-full flex-col gap-3 px-2 pb-40 pt-3"
+            : "mx-auto flex max-w-[1400px] flex-col gap-4 px-5 pb-40 pt-4 lg:px-8"
         }
       >
         {tab === "schedule" ? (
@@ -186,11 +186,6 @@ function snapNextHour(): Date {
   const d = new Date();
   d.setMinutes(0, 0, 0);
   d.setHours(d.getHours() + 1);
-  if (d.getHours() < 8) d.setHours(8);
-  if (d.getHours() >= 22) {
-    const n = addDays(startOfDay(d), 1);
-    n.setHours(9, 0, 0, 0);
-    return n;
-  }
+  if (d.getHours() < 6) d.setHours(6);
   return d;
 }

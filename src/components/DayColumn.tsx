@@ -23,19 +23,6 @@ const TYPE_CLASS: Record<RecruitEvent["type"], string> = {
   other: "bg-muted text-white",
 };
 
-/** Side rails for scrolling; blocks sit inset so a finger can pan the page. */
-function sideGutter(compact: boolean): number {
-  return compact ? 10 : 22;
-}
-
-function laneFrame(lane: number, laneCount: number, gutter: number, gap: number) {
-  const track = `100% - ${gutter * 2}px`;
-  return {
-    left: `calc(${gutter}px + (${track}) * ${lane} / ${laneCount} + ${gap / 2}px)`,
-    width: `calc((${track}) / ${laneCount} - ${gap}px)`,
-  };
-}
-
 export function DayColumn({
   day,
   startHour,
@@ -83,7 +70,6 @@ export function DayColumn({
   const conflicts = slices.some((s) => s.conflicted);
   const compact = mode === "week";
   const pxPerMinute = hourHeight / 60;
-  const gutter = sideGutter(compact);
 
   function topOf(d: Date) {
     const origin = new Date(day);
@@ -163,7 +149,7 @@ export function DayColumn({
       </div>
 
       <div
-        className={`relative cursor-pointer bg-surface-muted ${compact ? "rounded-[10px]" : "rounded-[20px]"}`}
+        className={`relative cursor-pointer overflow-hidden bg-surface-muted ${compact ? "rounded-[10px]" : "rounded-[20px]"}`}
         style={{ height }}
         onClick={onBgClick}
         role="presentation"
@@ -192,11 +178,11 @@ export function DayColumn({
           </div>
         ) : null}
 
-        {Array.from({ length: hours + 1 }, (_, i) => (
+        {Array.from({ length: hours - 1 }, (_, i) => (
           <div
             key={i}
             className="pointer-events-none absolute right-0 left-0 border-t border-border/80"
-            style={{ top: i * hourHeight }}
+            style={{ top: (i + 1) * hourHeight }}
           />
         ))}
 
@@ -216,8 +202,8 @@ export function DayColumn({
               style={{
                 top: top + 2,
                 height: h - 4,
-                left: gutter,
-                right: gutter,
+                left: compact ? 2 : 6,
+                right: compact ? 2 : 6,
                 touchAction: "pan-y",
               }}
             >
@@ -231,6 +217,7 @@ export function DayColumn({
         {slices.map((s) => {
           const top = topOf(s.start);
           const h = Math.max(22, topOf(s.end) - top);
+          const widthPct = 100 / s.laneCount;
           const dense = h < 40 || compact;
           return (
             <EventChip
@@ -238,7 +225,7 @@ export function DayColumn({
               slice={s}
               top={top}
               height={h}
-              gutter={gutter}
+              widthPct={widthPct}
               dense={dense}
               compact={compact}
               showTime={h > 56 && mode === "today"}
@@ -256,7 +243,6 @@ export function DayColumn({
             event={item.event}
             top={item.top}
             compact={compact}
-            gutter={gutter}
             pxPerMinute={pxPerMinute}
             day={day}
             onView={() => onViewEvent(item.event)}
@@ -288,7 +274,7 @@ function EventChip({
   slice,
   top,
   height,
-  gutter,
+  widthPct,
   dense,
   compact,
   showTime,
@@ -300,7 +286,7 @@ function EventChip({
   slice: EventSlice;
   top: number;
   height: number;
-  gutter: number;
+  widthPct: number;
   dense: boolean;
   compact: boolean;
   showTime: boolean;
@@ -314,7 +300,6 @@ function EventChip({
   );
   const moved = shiftEvent(slice.event, previewMin, day);
   const timeLabel = `${formatHM(new Date(moved.start))}–${formatHM(new Date(moved.end))}`;
-  const frame = laneFrame(slice.lane, slice.laneCount, gutter, compact ? 2 : 4);
   if (compact) {
     return (
       <button
@@ -328,7 +313,8 @@ function EventChip({
         style={{
           top: top + 1,
           height: Math.max(8, height - 2),
-          ...frame,
+          left: `calc(${slice.lane * widthPct}% + 2px)`,
+          width: `calc(${widthPct}% - 4px)`,
           willChange: live ? "transform" : undefined,
         }}
       />
@@ -345,7 +331,8 @@ function EventChip({
         style={{
           top: top + 2,
           height: height - 4,
-          ...frame,
+          left: `calc(${slice.lane * widthPct}% + 6px)`,
+          width: `calc(${widthPct}% - 10px)`,
           willChange: live ? "transform" : undefined,
         }}
     >
@@ -396,7 +383,6 @@ function AxisPin({
   event,
   top,
   compact,
-  gutter,
   pxPerMinute,
   day,
   onView,
@@ -405,7 +391,6 @@ function AxisPin({
   event: RecruitEvent;
   top: number;
   compact: boolean;
-  gutter: number;
   pxPerMinute: number;
   day: Date;
   onView: () => void;
@@ -433,8 +418,8 @@ function AxisPin({
         style={{
           top: Math.max(2, top - 3),
           height: 6,
-          left: gutter,
-          right: gutter,
+          left: 2,
+          right: 2,
           willChange: live ? "transform" : undefined,
         }}
       />
@@ -448,8 +433,8 @@ function AxisPin({
       className={`absolute flex items-center gap-1.5 rounded-[10px] px-2 py-0.5 text-left text-white select-none ${TYPE_CLASS[event.type]} ${live ? "z-[6] shadow-lg" : "z-[3]"}`}
       style={{
         top: Math.max(4, top - 11),
-        left: gutter,
-        right: gutter,
+        left: 6,
+        right: 6,
         willChange: live ? "transform" : undefined,
       }}
     >
