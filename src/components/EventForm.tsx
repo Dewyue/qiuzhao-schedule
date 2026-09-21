@@ -5,6 +5,7 @@ import type { EventKind, EventType, RecruitEvent } from "../types";
 
 const ROUNDS = ["一面", "二面", "终面"] as const;
 const DURATION_MINUTES = Array.from({ length: 24 }, (_, i) => (i + 1) * 10);
+const DEFAULT_DDL_MINUTES = 30;
 const FIELD =
   "h-11 rounded-[12px] bg-surface-muted px-3 text-[15px] outline-none";
 
@@ -29,23 +30,26 @@ export function EventForm({
   const [type, setType] = useState<EventType>(initialType);
   const [kind, setKind] = useState<EventKind>(readKind(source.kind));
   const [title, setTitle] = useState(source.title);
-  const [start, setStart] = useState(source.start ? toDatetimeLocal(new Date(source.start)) : "");
-  const [end, setEnd] = useState(source.end ? toDatetimeLocal(new Date(source.end)) : "");
+  const [start, setStart] = useState("");
+  const [end, setEnd] = useState("");
   const [location, setLocation] = useState(source.location ?? "");
   const [notes, setNotes] = useState(source.notes ?? "");
-  const [duration, setDuration] = useState(minutesBetween(source.start, source.end));
+  const [duration, setDuration] = useState(0);
 
   useEffect(() => {
     const next = editing ?? draft;
+    const nextType = FORM_TYPES.includes(next.type) ? next.type : "interview";
+    const nextKind = readKind(next.kind);
+    const range = initialFields(next);
     setCompany(next.company);
-    setType(FORM_TYPES.includes(next.type) ? next.type : "interview");
-    setKind(readKind(next.kind));
+    setType(nextType);
+    setKind(nextKind);
     setTitle(next.title);
-    setStart(next.start ? toDatetimeLocal(new Date(next.start)) : "");
-    setEnd(next.end ? toDatetimeLocal(new Date(next.end)) : "");
+    setStart(range.start);
+    setEnd(range.end);
     setLocation(next.location ?? "");
     setNotes(next.notes ?? "");
-    setDuration(minutesBetween(next.start, next.end));
+    setDuration(range.duration);
   }, [editing, draft]);
 
   const durationOptions = useMemo(() => {
@@ -55,7 +59,13 @@ export function EventForm({
     return DURATION_MINUTES;
   }, [duration]);
 
-  function applyDuration(mins: number, startLocal: string) {
+  const timedSlot =
+    kind === "slot" && (type === "exam" || type === "assessment" || type === "interview");
+  const timedDeadline =
+    kind === "deadline" && (type === "assessment" || type === "exam");
+  const modes = kindModes(type);
+
+  function applyDurationForward(mins: number, startLocal: string) {
     setDuration(mins);
     if (!startLocal || !mins) {
       setEnd("");
@@ -66,22 +76,72 @@ export function EventForm({
     setEnd(toDatetimeLocal(new Date(s.getTime() + mins * 60_000)));
   }
 
+  function applyDurationBack(mins: number, deadlineLocal: string) {
+    setDuration(mins);
+    if (!deadlineLocal || !mins) return;
+    const due = new Date(deadlineLocal);
+    if (Number.isNaN(due.getTime())) return;
+    setStart(toDatetimeLocal(new Date(due.getTime() - mins * 60_000)));
+  }
+
   function handleStartChange(value: string) {
     setStart(value);
-    if (type === "interview" && kind === "slot") {
-      applyDuration(duration || 60, value);
+    if (timedDeadline) {
+      if (end) setDuration(minutesBetween(value, end));
       return;
     }
-    if (kind === "deadline" || kind === "open" || kind === "allday") {
+    if (type === "interview" && kind === "slot") {
+      applyDurationForward(duration || 60, value);
+      return;
+    }
+    if (kind === "open" || kind === "allday") {
       setEnd(value);
       return;
     }
-    if (duration) applyDuration(duration, value);
+    if (kind === "deadline" && !timedDeadline) {
+      setEnd(value);
+      return;
+    }
+    if (duration) applyDurationForward(duration, value);
+  }
+
+  function handleDeadlineChange(value: string) {
+    setEnd(value);
+    applyDurationBack(duration || DEFAULT_DDL_MINUTES, value);
+  }
+
+  function enterDeadlineMode() {
+    setKind("deadline");
+    const due = end || start;
+    if (!due) return;
+    setEnd(due);
+    applyDurationBack(duration >= 10 ? duration : DEFAULT_DDL_MINUTES, due);
   }
 
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!company.trim() || !start) return;
+    if (!company.trim()) return;
+
+    if (timedDeadline) {
+      if (!end || !start) return;
+      const due = new Date(end);
+      let startDate = new Date(start);
+      if (!(due.getTime() > startDate.getTime())) {
+        startDate = new Date(due.getTime() - (duration || DEFAULT_DDL_MINUTES) * 60_000);
+      }
+      onSave({
+        company: company.trim(),
+        type,
+        title: "截止",
+        start: startDate.toISOString(),
+        end: due.toISOString(),
+        notes: notes.trim() || undefined,
+        kind: "deadline",
+      });
+      return;
+    }
+
+    if (!start) return;
     let startDate = new Date(start);
     if (kind === "allday") {
       startDate = new Date(startDate);
@@ -91,8 +151,6 @@ export function EventForm({
     let endDate: Date;
     if (marker) {
       endDate = new Date(startDate.getTime() + 60 * 1000);
-    } else if (type === "interview" && !end) {
-      endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
     } else if (end) {
       endDate = new Date(end);
     } else {
@@ -111,9 +169,6 @@ export function EventForm({
       kind,
     });
   }
-
-  const timed = (type === "exam" || (type === "assessment" && kind === "slot")) && kind === "slot";
-  const modes = kindModes(type);
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3">
@@ -145,8 +200,15 @@ export function EventForm({
             if (next !== "interview") setTitle("");
             if (next !== "interview" && next !== "jobfair") setLocation("");
             const allowed = kindModes(next).map((m) => m.id);
-            if (!allowed.includes(kind)) setKind("slot");
-            if (next === "interview") applyDuration(duration || 60, start);
+            const nextKind = allowed.includes(kind) ? kind : "slot";
+            setKind(nextKind);
+            if (next === "interview" && nextKind === "slot") {
+              applyDurationForward(duration || 60, start);
+            }
+            if ((next === "assessment" || next === "exam") && nextKind === "deadline") {
+              const due = end || start;
+              if (due) applyDurationBack(duration >= 10 ? duration : DEFAULT_DDL_MINUTES, due);
+            }
           }}
           className={FIELD}
         >
@@ -166,7 +228,16 @@ export function EventForm({
               <button
                 key={mode.id}
                 type="button"
-                onClick={() => setKind(mode.id)}
+                onClick={() => {
+                  if (mode.id === "deadline" && (type === "assessment" || type === "exam")) {
+                    enterDeadlineMode();
+                    return;
+                  }
+                  setKind(mode.id);
+                  if (mode.id === "slot" && type === "interview") {
+                    applyDurationForward(duration || 60, start);
+                  }
+                }}
                 className={
                   kind === mode.id
                     ? "h-10 flex-1 rounded-[12px] bg-accent text-[14px] font-medium text-white"
@@ -177,8 +248,10 @@ export function EventForm({
               </button>
             ))}
           </div>
-          {kindHint(kind) ? (
-            <p className="text-[12px] leading-relaxed text-muted">{kindHint(kind)}</p>
+          {kindHint(kind, timedDeadline) ? (
+            <p className="text-[12px] leading-relaxed text-muted">
+              {kindHint(kind, timedDeadline)}
+            </p>
           ) : null}
         </fieldset>
       ) : null}
@@ -205,27 +278,67 @@ export function EventForm({
         </fieldset>
       ) : null}
 
-      <label className="flex flex-col gap-1">
-        <span className="text-[13px] text-muted">{timeLabel(kind, type)}</span>
-        <input
-          type={kind === "allday" ? "date" : "datetime-local"}
-          required
-          value={kind === "allday" ? start.slice(0, 10) : start}
-          onChange={(e) => {
-            if (kind === "allday") handleStartChange(`${e.target.value}T00:00`);
-            else handleStartChange(e.target.value);
-          }}
-          className={FIELD}
-        />
-      </label>
+      {timedDeadline ? (
+        <>
+          <label className="flex flex-col gap-1">
+            <span className="text-[13px] text-muted">截止时间</span>
+            <input
+              type="datetime-local"
+              required
+              value={end}
+              onChange={(e) => handleDeadlineChange(e.target.value)}
+              className={FIELD}
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-[13px] text-muted">时长</span>
+            <select
+              value={duration || ""}
+              onChange={(e) => applyDurationBack(Number(e.target.value), end)}
+              className={FIELD}
+            >
+              <option value="">先选时长</option>
+              {durationOptions.map((mins) => (
+                <option key={mins} value={mins}>
+                  {labelDuration(mins)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-[13px] text-muted">开始</span>
+            <input
+              type="datetime-local"
+              required
+              value={start}
+              onChange={(e) => handleStartChange(e.target.value)}
+              className={FIELD}
+            />
+          </label>
+        </>
+      ) : (
+        <label className="flex flex-col gap-1">
+          <span className="text-[13px] text-muted">{timeLabel(kind, type)}</span>
+          <input
+            type={kind === "allday" ? "date" : "datetime-local"}
+            required
+            value={kind === "allday" ? start.slice(0, 10) : start}
+            onChange={(e) => {
+              if (kind === "allday") handleStartChange(`${e.target.value}T00:00`);
+              else handleStartChange(e.target.value);
+            }}
+            className={FIELD}
+          />
+        </label>
+      )}
 
-      {timed ? (
+      {timedSlot ? (
         <>
           <label className="flex flex-col gap-1">
             <span className="text-[13px] text-muted">时长</span>
             <select
               value={duration || ""}
-              onChange={(e) => applyDuration(Number(e.target.value), start)}
+              onChange={(e) => applyDurationForward(Number(e.target.value), start)}
               className={FIELD}
             >
               <option value="">先选时长</option>
@@ -240,6 +353,7 @@ export function EventForm({
             <span className="text-[13px] text-muted">结束</span>
             <input
               type="datetime-local"
+              required
               value={end}
               onChange={(e) => {
                 setEnd(e.target.value);
@@ -316,6 +430,38 @@ export function EventForm({
   );
 }
 
+function initialFields(source: Draft): { start: string; end: string; duration: number } {
+  const kind = readKind(source.kind);
+  const startLocal = source.start ? toDatetimeLocal(new Date(source.start)) : "";
+  const endLocal = source.end ? toDatetimeLocal(new Date(source.end)) : "";
+  const mins = minutesBetween(source.start, source.end);
+
+  if (kind === "deadline" && (source.type === "assessment" || source.type === "exam")) {
+    const due =
+      mins > 2 && source.end
+        ? endLocal
+        : startLocal;
+    const duration = mins > 2 ? mins : DEFAULT_DDL_MINUTES;
+    const start =
+      mins > 2 && startLocal
+        ? startLocal
+        : due
+          ? toDatetimeLocal(new Date(new Date(due).getTime() - duration * 60_000))
+          : "";
+    return { start, end: due, duration };
+  }
+
+  if (source.type === "interview" && kind === "slot" && mins < 10 && source.start) {
+    return {
+      start: startLocal,
+      duration: 60,
+      end: toDatetimeLocal(new Date(new Date(source.start).getTime() + 60 * 60_000)),
+    };
+  }
+
+  return { start: startLocal, end: endLocal, duration: mins };
+}
+
 function readKind(kind: EventKind | undefined): EventKind {
   if (kind === "deadline" || kind === "allday" || kind === "open") return kind;
   return "slot";
@@ -345,7 +491,10 @@ function kindModes(type: EventType): { id: EventKind; label: string }[] {
   return [];
 }
 
-function kindHint(kind: EventKind): string {
+function kindHint(kind: EventKind, timedDeadline: boolean): string {
+  if (timedDeadline) {
+    return "先填截止，再填时长；开始默认从截止往前倒推。这段会占用空闲，截止时刻仍写在时间上。";
+  }
   if (kind === "deadline") return "只记 DDL，不占用当天空闲。时间轴上会在截止时刻打一个标记。";
   if (kind === "open") return "只记开考时刻，不拉色块、不占用空闲。知道时长后再改成限时场次。";
   if (kind === "allday") return "挂在当天，不铺满时间轴。时间定了再改成已约时段。";

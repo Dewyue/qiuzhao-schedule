@@ -13,6 +13,7 @@ import {
   layoutDayEvents,
   longestFree,
   formatDuration,
+  occupiesTime,
   occupancyEvents,
 } from "../lib/time";
 import { DayColumn } from "./DayColumn";
@@ -127,7 +128,9 @@ export function RangeSummary({
   for (const day of days) {
     const slices = layoutDayEvents(occ, day);
     eventCount += slices.length;
-    ddlCount += events.filter((e) => isDeadline(e) && eventTouchesDay(e, day)).length;
+    ddlCount += events.filter(
+      (e) => isDeadline(e) && !occupiesTime(e) && eventTouchesDay(e, day),
+    ).length;
     openCount += events.filter((e) => isOpenStart(e) && eventTouchesDay(e, day)).length;
     pendingCount += events.filter((e) => isAllDay(e) && eventTouchesDay(e, day)).length;
     const longestDay = longestFree(freeSlotsOnDay(occ, day, startHour, endHour));

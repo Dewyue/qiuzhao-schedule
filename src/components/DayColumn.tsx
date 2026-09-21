@@ -2,6 +2,7 @@ import type { MouseEvent } from "react";
 import type { EventSlice, FreeSlot, RangeMode, RecruitEvent } from "../types";
 import { usePressActions } from "../lib/press";
 import {
+  deadlineMoment,
   formatDuration,
   formatHM,
   isDeadline,
@@ -329,7 +330,11 @@ function EventChip({
       {!dense ? (
         <p className="truncate text-[11px] opacity-80">
           {TYPE_LABEL[slice.event.type]}
-          {slice.event.title ? ` · ${slice.event.title}` : ""}
+          {slice.event.kind === "deadline"
+            ? " · 截止"
+            : slice.event.title
+              ? ` · ${slice.event.title}`
+              : ""}
         </p>
       ) : null}
       {showTime ? (
@@ -341,20 +346,22 @@ function EventChip({
   );
 }
 
+function pinAt(event: RecruitEvent): Date {
+  return isDeadline(event) ? deadlineMoment(event) : new Date(event.start);
+}
+
 function layoutPins(
   pins: RecruitEvent[],
   topOf: (d: Date) => number,
   height: number,
   compact: boolean,
 ): { event: RecruitEvent; top: number }[] {
-  const sorted = [...pins].sort(
-    (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime(),
-  );
+  const sorted = [...pins].sort((a, b) => pinAt(a).getTime() - pinAt(b).getTime());
   const gap = compact ? 8 : 22;
   const out: { event: RecruitEvent; top: number }[] = [];
   let last = -999;
   for (const event of sorted) {
-    let top = Math.min(height - gap, Math.max(0, topOf(new Date(event.start))));
+    let top = Math.min(height - gap, Math.max(0, topOf(pinAt(event))));
     if (top - last < gap) top = last + gap;
     last = top;
     out.push({ event, top });
@@ -376,7 +383,8 @@ function AxisPin({
   onMenu: () => void;
 }) {
   const press = usePressActions(onView, onMenu);
-  const hm = formatHM(new Date(event.start));
+  const at = pinAt(event);
+  const hm = formatHM(at);
   const label = isDeadline(event)
     ? `截止 ${hm} · ${event.company}`
     : event.type === "exam"

@@ -1,4 +1,4 @@
-import { formatEventSpan, TYPE_LABEL } from "../lib/time";
+import { deadlineMoment, formatEventSpan, formatHM, isDeadline, occupiesTime, TYPE_LABEL } from "../lib/time";
 import type { RecruitEvent } from "../types";
 
 export function EventDetail({
@@ -8,6 +8,9 @@ export function EventDetail({
   event: RecruitEvent;
   onClose: () => void;
 }) {
+  const due = isDeadline(event) ? deadlineMoment(event) : null;
+  const rangedDeadline = due !== null && occupiesTime(event);
+
   return (
     <div className="fixed inset-0 z-30 flex items-end justify-center bg-black/30 p-4 sm:items-center">
       <button type="button" className="absolute inset-0" aria-label="关闭" onClick={onClose} />
@@ -18,15 +21,22 @@ export function EventDetail({
       >
         <p className="text-[13px] font-medium text-accent">
           {TYPE_LABEL[event.type]}
-          {event.title ? ` · ${event.title}` : ""}
+          {event.kind === "deadline" ? " · 截止提交" : event.title ? ` · ${event.title}` : ""}
         </p>
         <h2 id="event-detail-title" className="mt-1 text-[22px] font-semibold tracking-[-0.03em]">
           {event.company}
         </h2>
         <p className="mt-3 text-[15px] tabular-nums text-muted">
           {new Date(event.start).getMonth() + 1}月{new Date(event.start).getDate()}日{" "}
-          {formatEventSpan(event)}
+          {rangedDeadline && due
+            ? `${formatHM(new Date(event.start))}–${formatHM(due)}`
+            : formatEventSpan(event)}
         </p>
+        {rangedDeadline && due ? (
+          <p className="mt-2 text-[15px] tabular-nums">
+            截止 {due.getMonth() + 1}月{due.getDate()}日 {formatHM(due)}
+          </p>
+        ) : null}
         {event.location ? <p className="mt-2 text-[15px]">{event.location}</p> : null}
         {event.notes ? <p className="mt-2 text-[14px] leading-relaxed text-muted">{event.notes}</p> : null}
         <button

@@ -34,8 +34,12 @@ export function isOpenStart(event: Pick<RecruitEvent, "kind">): boolean {
   return eventKind(event) === "open";
 }
 
-export function occupiesTime(event: Pick<RecruitEvent, "kind">): boolean {
-  return eventKind(event) === "slot";
+export function occupiesTime(event: Pick<RecruitEvent, "kind" | "start" | "end">): boolean {
+  if (eventKind(event) === "slot") return true;
+  if (!isDeadline(event)) return false;
+  const start = new Date(event.start).getTime();
+  const end = new Date(event.end).getTime();
+  return end - start > 2 * 60_000;
 }
 
 export function occupancyEvents(events: RecruitEvent[]): RecruitEvent[] {
@@ -43,11 +47,33 @@ export function occupancyEvents(events: RecruitEvent[]): RecruitEvent[] {
 }
 
 export function axisPins(events: RecruitEvent[]): RecruitEvent[] {
-  return events.filter((e) => isDeadline(e) || isOpenStart(e));
+  return events.filter((e) => {
+    if (isOpenStart(e)) return true;
+    // Marker-only DDL (no real duration) stays a pin; ranged DDL is an occupancy block.
+    return isDeadline(e) && !occupiesTime(e);
+  });
+}
+
+export function deadlineMoment(event: Pick<RecruitEvent, "kind" | "start" | "end">): Date {
+  if (!isDeadline(event)) return new Date(event.start);
+  const start = new Date(event.start);
+  const end = new Date(event.end);
+  const mins = Math.round((end.getTime() - start.getTime()) / 60_000);
+  // Old imports used a 1-minute marker at start; newer ones pin at end.
+  if (mins > 2) return end;
+  return start;
 }
 
 export function formatEventSpan(event: RecruitEvent): string {
-  if (isDeadline(event)) return `截止 ${formatHM(new Date(event.start))}`;
+  if (isDeadline(event)) {
+    const due = deadlineMoment(event);
+    const start = new Date(event.start);
+    const spanMins = Math.round((due.getTime() - start.getTime()) / 60_000);
+    if (spanMins > 2) {
+      return `${formatHM(start)}–截止 ${formatHM(due)}`;
+    }
+    return `截止 ${formatHM(due)}`;
+  }
   if (isAllDay(event)) return "当天 · 时间待定";
   if (isOpenStart(event)) {
     const verb = event.type === "exam" ? "开考" : "开始";
@@ -115,9 +141,15 @@ export type EventStatus = "done" | "live" | "upcoming";
 export function eventStatus(event: RecruitEvent, now = new Date()): EventStatus {
   const t = now.getTime();
   if (isDeadline(event) || isAllDay(event)) {
-    const dayEnd = addDays(startOfDay(new Date(event.start)), 1);
-    if (isAllDay(event)) return t >= dayEnd.getTime() ? "done" : "upcoming";
-    return new Date(event.start).getTime() <= t ? "done" : "upcoming";
+    if (isAllDay(event)) {
+      const dayEnd = addDays(startOfDay(new Date(event.start)), 1);
+      return t >= dayEnd.getTime() ? "done" : "upcoming";
+    }
+    const due = deadlineMoment(event).getTime();
+    const start = new Date(event.start).getTime();
+    if (due <= t) return "done";
+    if (occupiesTime(event) && start <= t) return "live";
+    return "upcoming";
   }
   if (isOpenStart(event)) {
     const start = new Date(event.start).getTime();
