@@ -1,0 +1,12 @@
+---
+description: Ship qiuzhao-schedule changes to GitHub Pages by default
+alwaysApply: true
+---
+
+# Deploy by default
+
+After finishing a user-requested change in this project, commit and push to `main` without waiting to be asked, unless the user explicitly says not to ship yet.
+
+- Remote is SSH: `git@github.com:Dewyue/qiuzhao-schedule.git`
+- Pushing `main` triggers GitHub Pages
+- Keep the usual commit message quality; do not force-push
