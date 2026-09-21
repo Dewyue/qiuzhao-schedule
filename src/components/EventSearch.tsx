@@ -7,12 +7,10 @@ export function EventSearch({
   events,
   now,
   onView,
-  onMenu,
 }: {
   events: RecruitEvent[];
   now: Date;
   onView: (event: RecruitEvent) => void;
-  onMenu: (event: RecruitEvent) => void;
 }) {
   const [query, setQuery] = useState("");
   const [scope, setScope] = useState<"all" | "done" | "open">("all");
@@ -107,7 +105,6 @@ export function EventSearch({
                         event={e}
                         now={now}
                         onView={() => onView(e)}
-                        onMenu={() => onMenu(e)}
                       />
                     </li>
                   ))}

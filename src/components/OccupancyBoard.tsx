@@ -30,7 +30,7 @@ export function OccupancyBoard({
   now,
   selectedDay,
   onViewEvent,
-  onEventMenu,
+  onShiftEvent,
   onSelectFree,
   onPickTime,
 }: {
@@ -39,7 +39,7 @@ export function OccupancyBoard({
   now: Date;
   selectedDay: Date;
   onViewEvent: (event: RecruitEvent) => void;
-  onEventMenu: (event: RecruitEvent) => void;
+  onShiftEvent: (event: RecruitEvent) => void;
   onSelectFree: (slot: FreeSlot) => void;
   onPickTime: (start: Date) => void;
 }) {
@@ -97,7 +97,7 @@ export function OccupancyBoard({
               selected={day.toDateString() === selectedDay.toDateString()}
               headerHeight={headerH}
               onViewEvent={onViewEvent}
-              onEventMenu={onEventMenu}
+              onShiftEvent={onShiftEvent}
               onSelectFree={onSelectFree}
               onPickTime={onPickTime}
             />

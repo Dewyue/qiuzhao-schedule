@@ -1,6 +1,6 @@
 import type { MouseEvent } from "react";
 import type { EventSlice, FreeSlot, RangeMode, RecruitEvent } from "../types";
-import { usePressActions } from "../lib/press";
+import { useBlockDrag } from "../lib/drag";
 import {
   deadlineMoment,
   formatDuration,
@@ -8,6 +8,7 @@ import {
   isDeadline,
   isSameDay,
   mergeBusy,
+  shiftEvent,
   TYPE_LABEL,
   weekdayLabel,
   weekdayShort,
@@ -35,7 +36,7 @@ export function DayColumn({
   selected,
   headerHeight,
   onViewEvent,
-  onEventMenu,
+  onShiftEvent,
   onSelectFree,
   onPickTime,
 }: {
@@ -52,7 +53,7 @@ export function DayColumn({
   selected: boolean;
   headerHeight: number;
   onViewEvent: (event: RecruitEvent) => void;
-  onEventMenu: (event: RecruitEvent) => void;
+  onShiftEvent: (event: RecruitEvent) => void;
   onSelectFree: (slot: FreeSlot) => void;
   onPickTime: (start: Date) => void;
 }) {
@@ -67,6 +68,7 @@ export function DayColumn({
   const fill = Math.min(1, busyMinutes / windowMinutes);
   const conflicts = slices.some((s) => s.conflicted);
   const compact = mode === "week";
+  const pxPerMinute = hourHeight / 60;
 
   function topOf(d: Date) {
     const origin = new Date(day);
@@ -163,10 +165,6 @@ export function DayColumn({
                   e.stopPropagation();
                   onViewEvent(event);
                 }}
-                onContextMenu={(e) => {
-                  e.preventDefault();
-                  onEventMenu(event);
-                }}
                 className={
                   compact
                     ? "size-2 rounded-full bg-accent"
@@ -229,8 +227,10 @@ export function DayColumn({
               dense={dense}
               compact={compact}
               showTime={h > 56 && mode === "today"}
+              pxPerMinute={pxPerMinute}
+              day={day}
               onView={() => onViewEvent(s.event)}
-              onMenu={() => onEventMenu(s.event)}
+              onShift={(deltaMin) => onShiftEvent(shiftEvent(s.event, deltaMin, day))}
             />
           );
         })}
@@ -241,8 +241,10 @@ export function DayColumn({
             event={item.event}
             top={item.top}
             compact={compact}
+            pxPerMinute={pxPerMinute}
+            day={day}
             onView={() => onViewEvent(item.event)}
-            onMenu={() => onEventMenu(item.event)}
+            onShift={(deltaMin) => onShiftEvent(shiftEvent(item.event, deltaMin, day))}
           />
         ))}
 
@@ -274,8 +276,10 @@ function EventChip({
   dense,
   compact,
   showTime,
+  pxPerMinute,
+  day,
   onView,
-  onMenu,
+  onShift,
 }: {
   slice: EventSlice;
   top: number;
@@ -284,26 +288,32 @@ function EventChip({
   dense: boolean;
   compact: boolean;
   showTime: boolean;
+  pxPerMinute: number;
+  day: Date;
   onView: () => void;
-  onMenu: () => void;
+  onShift: (deltaMin: number) => void;
 }) {
-  const press = usePressActions(onView, onMenu);
+  const { live, deltaMin, bind } = useBlockDrag(pxPerMinute, onView, onShift);
+  const moved = shiftEvent(slice.event, deltaMin, day);
+  const dy = ((new Date(moved.start).getTime() - slice.start.getTime()) / 60_000) * pxPerMinute;
+  const timeLabel = `${formatHM(new Date(moved.start))}–${formatHM(new Date(moved.end))}`;
   if (compact) {
     return (
       <button
         type="button"
         data-block
-        aria-label={`${slice.event.company} ${TYPE_LABEL[slice.event.type]}`}
-        {...press}
-        className={`absolute z-[2] select-none ${TYPE_CLASS[slice.event.type]} ${
+        aria-label={`${slice.event.company} ${TYPE_LABEL[slice.event.type]} ${timeLabel}`}
+        {...bind}
+        className={`absolute select-none rounded-[5px] ${TYPE_CLASS[slice.event.type]} ${
           slice.conflicted ? "ring-1 ring-danger" : ""
-        } rounded-[5px]`}
+        } ${live ? "z-[6] shadow-lg" : "z-[2]"}`}
         style={{
           top: top + 1,
           height: Math.max(8, height - 2),
           left: `calc(${slice.lane * widthPct}% + 2px)`,
           width: `calc(${widthPct}% - 4px)`,
-          touchAction: "manipulation",
+          transform: dy ? `translateY(${dy}px)` : undefined,
+          touchAction: live ? "none" : "pan-y",
         }}
       />
     );
@@ -312,16 +322,17 @@ function EventChip({
     <button
       type="button"
       data-block
-      {...press}
-        className={`absolute z-[2] overflow-hidden rounded-[12px] px-2 py-1 text-left select-none ${TYPE_CLASS[slice.event.type]} ${
+      {...bind}
+        className={`absolute overflow-hidden rounded-[12px] px-2 py-1 text-left select-none ${TYPE_CLASS[slice.event.type]} ${
         slice.conflicted ? "ring-2 ring-danger ring-offset-1 ring-offset-surface-muted" : ""
-      }`}
+      } ${live ? "z-[6] shadow-lg" : "z-[2]"}`}
         style={{
           top: top + 2,
           height: height - 4,
           left: `calc(${slice.lane * widthPct}% + 6px)`,
           width: `calc(${widthPct}% - 10px)`,
-          touchAction: "manipulation",
+          transform: dy ? `translateY(${dy}px)` : undefined,
+          touchAction: live ? "none" : "pan-y",
         }}
     >
       <p className={`truncate font-semibold ${dense ? "text-[12px]" : "text-[13px]"}`}>
@@ -337,10 +348,8 @@ function EventChip({
               : ""}
         </p>
       ) : null}
-      {showTime ? (
-        <p className="mt-0.5 text-[11px] opacity-80">
-          {formatHM(slice.start)}–{formatHM(slice.end)}
-        </p>
+      {showTime || live ? (
+        <p className="mt-0.5 text-[11px] opacity-80">{timeLabel}</p>
       ) : null}
     </button>
   );
@@ -373,17 +382,23 @@ function AxisPin({
   event,
   top,
   compact,
+  pxPerMinute,
+  day,
   onView,
-  onMenu,
+  onShift,
 }: {
   event: RecruitEvent;
   top: number;
   compact: boolean;
+  pxPerMinute: number;
+  day: Date;
   onView: () => void;
-  onMenu: () => void;
+  onShift: (deltaMin: number) => void;
 }) {
-  const press = usePressActions(onView, onMenu);
-  const at = pinAt(event);
+  const { live, deltaMin, bind } = useBlockDrag(pxPerMinute, onView, onShift);
+  const moved = shiftEvent(event, deltaMin, day);
+  const dy = ((new Date(moved.start).getTime() - new Date(event.start).getTime()) / 60_000) * pxPerMinute;
+  const at = pinAt(moved);
   const hm = formatHM(at);
   const label = isDeadline(event)
     ? `截止 ${hm} · ${event.company}`
@@ -396,14 +411,15 @@ function AxisPin({
         type="button"
         data-block
         aria-label={label}
-        {...press}
-        className={`absolute z-[3] rounded-[3px] select-none ${TYPE_CLASS[event.type]}`}
+        {...bind}
+        className={`absolute select-none rounded-[3px] ${TYPE_CLASS[event.type]} ${live ? "z-[6] shadow-lg" : "z-[3]"}`}
         style={{
           top: Math.max(2, top - 3),
           height: 6,
           left: 2,
           right: 2,
-          touchAction: "manipulation",
+          transform: dy ? `translateY(${dy}px)` : undefined,
+          touchAction: live ? "none" : "pan-y",
         }}
       />
     );
@@ -412,13 +428,14 @@ function AxisPin({
     <button
       type="button"
       data-block
-      {...press}
-      className={`absolute z-[3] flex items-center gap-1.5 rounded-[10px] px-2 py-0.5 text-left text-white select-none ${TYPE_CLASS[event.type]}`}
+      {...bind}
+      className={`absolute flex items-center gap-1.5 rounded-[10px] px-2 py-0.5 text-left text-white select-none ${TYPE_CLASS[event.type]} ${live ? "z-[6] shadow-lg" : "z-[3]"}`}
       style={{
         top: Math.max(4, top - 11),
         left: 6,
         right: 6,
-        touchAction: "manipulation",
+        transform: dy ? `translateY(${dy}px)` : undefined,
+        touchAction: live ? "none" : "pan-y",
       }}
     >
       <span className="size-1.5 shrink-0 rounded-full bg-white" />

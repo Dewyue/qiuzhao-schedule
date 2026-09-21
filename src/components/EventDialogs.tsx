@@ -4,9 +4,13 @@ import type { RecruitEvent } from "../types";
 export function EventDetail({
   event,
   onClose,
+  onEdit,
+  onDelete,
 }: {
   event: RecruitEvent;
   onClose: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
 }) {
   const due = isDeadline(event) ? deadlineMoment(event) : null;
   const rangedDeadline = due !== null && occupiesTime(event);
@@ -45,55 +49,29 @@ export function EventDetail({
         ) : null}
         {event.location ? <p className="mt-2 text-[15px]">{event.location}</p> : null}
         {event.notes ? <p className="mt-2 text-[14px] leading-relaxed text-muted">{event.notes}</p> : null}
-        <button
-          type="button"
-          onClick={onClose}
-          className="mt-5 h-11 w-full rounded-[12px] bg-surface-muted text-[15px] font-medium"
-        >
-          关闭
-        </button>
-      </div>
-    </div>
-  );
-}
-
-export function EventMenu({
-  event,
-  onEdit,
-  onDelete,
-  onClose,
-}: {
-  event: RecruitEvent;
-  onEdit: () => void;
-  onDelete: () => void;
-  onClose: () => void;
-}) {
-  return (
-    <div className="fixed inset-0 z-30 flex items-end justify-center bg-black/30 p-4 sm:items-center">
-      <button type="button" className="absolute inset-0" aria-label="取消" onClick={onClose} />
-      <div role="dialog" className="relative w-full max-w-[400px] overflow-hidden rounded-[20px] bg-surface">
-        <p className="px-5 pt-4 text-[13px] text-muted">{event.company}</p>
-        <button
-          type="button"
-          onClick={onEdit}
-          className="h-12 w-full px-5 text-left text-[16px] font-medium"
-        >
-          编辑
-        </button>
-        <button
-          type="button"
-          onClick={onDelete}
-          className="h-12 w-full px-5 text-left text-[16px] font-medium text-danger"
-        >
-          删除
-        </button>
-        <button
-          type="button"
-          onClick={onClose}
-          className="h-12 w-full border-t border-border px-5 text-left text-[16px] text-muted"
-        >
-          取消
-        </button>
+        <div className="mt-5 flex gap-2">
+          <button
+            type="button"
+            onClick={onEdit}
+            className="h-11 flex-1 rounded-[12px] bg-accent text-[15px] font-medium text-white"
+          >
+            编辑
+          </button>
+          <button
+            type="button"
+            onClick={onDelete}
+            className="h-11 rounded-[12px] px-4 text-[15px] font-medium text-danger"
+          >
+            删除
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="h-11 rounded-[12px] bg-surface-muted px-4 text-[15px] font-medium"
+          >
+            关闭
+          </button>
+        </div>
       </div>
     </div>
   );

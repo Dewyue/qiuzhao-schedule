@@ -34,6 +34,32 @@ export function isOpenStart(event: Pick<RecruitEvent, "kind">): boolean {
   return eventKind(event) === "open";
 }
 
+/** Move a block by snapped minutes. Duration stays; occupying deadlines keep their cutoff. */
+export function shiftEvent(event: RecruitEvent, deltaMin: number, day: Date): RecruitEvent {
+  if (!deltaMin) return event;
+  const startMs = new Date(event.start).getTime();
+  const endMs = new Date(event.end).getTime();
+  const dur = Math.max(endMs - startMs, 60_000);
+  const day0 = startOfDay(day).getTime();
+  const day1 = addDays(startOfDay(day), 1).getTime();
+  let next = startMs + deltaMin * 60_000;
+  if (next < day0) next = day0;
+  if (dur < day1 - day0 && next + dur > day1) next = day1 - dur;
+  if (dur >= day1 - day0 && next >= day1) next = day1 - 15 * 60_000;
+  if (next === startMs) return event;
+  const moved = next - startMs;
+  const shifted: RecruitEvent = {
+    ...event,
+    start: new Date(next).toISOString(),
+    end: new Date(next + dur).toISOString(),
+  };
+  if (isDeadline(event) && occupiesTime(event)) shifted.deadline = event.deadline;
+  else if (event.deadline) {
+    shifted.deadline = new Date(new Date(event.deadline).getTime() + moved).toISOString();
+  }
+  return shifted;
+}
+
 export function occupiesTime(event: Pick<RecruitEvent, "kind" | "start" | "end">): boolean {
   if (eventKind(event) === "slot") return true;
   if (!isDeadline(event)) return false;

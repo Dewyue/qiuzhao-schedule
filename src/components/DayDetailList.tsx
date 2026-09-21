@@ -1,17 +1,14 @@
 import type { RecruitEvent } from "../types";
-import { usePressActions } from "../lib/press";
 import { formatEventSpan, isSameDay, TYPE_LABEL } from "../lib/time";
 
 export function DayDetailList({
   events,
   day,
   onView,
-  onMenu,
 }: {
   events: RecruitEvent[];
   day: Date;
   onView: (event: RecruitEvent) => void;
-  onMenu: (event: RecruitEvent) => void;
 }) {
   const items = events
     .filter((e) => isSameDay(new Date(e.start), day) || overlapsDay(e, day))
@@ -22,7 +19,7 @@ export function DayDetailList({
       <div className="px-1 py-4">
         <p className="text-[15px] font-medium">这一天还空着</p>
         <p className="mt-1 text-[14px] leading-relaxed text-muted">
-          点时间柱上的空白去记录。点一场查看详情，长按编辑或删除。
+          点时间柱上的空白去记录。点一场查看详情，可在浮窗里编辑或删除。长按色块上下拖可改时间。
         </p>
       </div>
     );
@@ -32,7 +29,7 @@ export function DayDetailList({
     <ul className="flex flex-col gap-2">
       {items.map((e) => (
         <li key={e.id}>
-          <ListRow event={e} onView={() => onView(e)} onMenu={() => onMenu(e)} />
+          <ListRow event={e} onView={() => onView(e)} />
         </li>
       ))}
     </ul>
@@ -42,19 +39,15 @@ export function DayDetailList({
 function ListRow({
   event,
   onView,
-  onMenu,
 }: {
   event: RecruitEvent;
   onView: () => void;
-  onMenu: () => void;
 }) {
-  const press = usePressActions(onView, onMenu);
   return (
     <button
       type="button"
-      {...press}
-      className="flex w-full items-start justify-between gap-3 rounded-[18px] bg-surface-muted px-4 py-3 text-left select-none hover:bg-[#ececf0]"
-      style={{ touchAction: "manipulation" }}
+      onClick={onView}
+      className="flex w-full items-start justify-between gap-3 rounded-[18px] bg-surface-muted px-4 py-3 text-left hover:bg-[#ececf0]"
     >
       <div className="min-w-0">
         <p className="truncate text-[15px] font-semibold tracking-[-0.02em]">{event.company}</p>

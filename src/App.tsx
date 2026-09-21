@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { BottomNav, type Tab } from "./components/BottomNav";
 import { DataPanel } from "./components/DataPanel";
 import { DayDetailList } from "./components/DayDetailList";
-import { EventDetail, EventMenu } from "./components/EventDialogs";
+import { EventDetail } from "./components/EventDialogs";
 import { EventForm } from "./components/EventForm";
 import { OccupancyBoard, RangeSummary } from "./components/OccupancyBoard";
 import { RangeSwitch } from "./components/RangeSwitch";
@@ -19,7 +19,6 @@ export default function App() {
   const [editing, setEditing] = useState<RecruitEvent | null>(null);
   const [draft, setDraft] = useState<Omit<RecruitEvent, "id">>(() => defaultDraft());
   const [viewing, setViewing] = useState<RecruitEvent | null>(null);
-  const [menuEvent, setMenuEvent] = useState<RecruitEvent | null>(null);
 
   function defaultDraft(start?: Date): Omit<RecruitEvent, "id"> {
     const s = start ?? snapNextHour();
@@ -40,7 +39,6 @@ export default function App() {
     setDraft(next);
     setEditing(event ?? null);
     setViewing(null);
-    setMenuEvent(null);
     setTab("record");
   }
 
@@ -55,15 +53,13 @@ export default function App() {
   }
 
   function onViewEvent(event: RecruitEvent) {
-    setMenuEvent(null);
     setSelectedDay(startOfDay(new Date(event.start)));
     setViewing(event);
   }
 
-  function onEventMenu(event: RecruitEvent) {
-    setViewing(null);
-    setSelectedDay(startOfDay(new Date(event.start)));
-    setMenuEvent(event);
+  function onShiftEvent(event: RecruitEvent) {
+    update(event);
+    setViewing((current) => (current?.id === event.id ? event : current));
   }
 
   function eventToDraft(event: RecruitEvent): Omit<RecruitEvent, "id"> {
@@ -110,7 +106,7 @@ export default function App() {
               now={now}
               selectedDay={selectedDay}
               onViewEvent={onViewEvent}
-              onEventMenu={onEventMenu}
+              onShiftEvent={onShiftEvent}
               onSelectFree={onSelectFree}
               onPickTime={onPickTime}
             />
@@ -121,7 +117,6 @@ export default function App() {
                   events={events}
                   day={selectedDay}
                   onView={onViewEvent}
-                  onMenu={onEventMenu}
                 />
               </div>
             ) : null}
@@ -167,24 +162,19 @@ export default function App() {
             events={events}
             now={now}
             onImport={replace}
-            onView={(event) => {
-              setMenuEvent(null);
-              setViewing(event);
-            }}
-            onMenu={onEventMenu}
+            onView={onViewEvent}
           />
         ) : null}
       </div>
       <BottomNav value={tab} onChange={setTab} />
-      {viewing ? <EventDetail event={viewing} onClose={() => setViewing(null)} /> : null}
-      {menuEvent ? (
-        <EventMenu
-          event={menuEvent}
-          onClose={() => setMenuEvent(null)}
-          onEdit={() => openRecord(eventToDraft(menuEvent), menuEvent)}
+      {viewing ? (
+        <EventDetail
+          event={viewing}
+          onClose={() => setViewing(null)}
+          onEdit={() => openRecord(eventToDraft(viewing), viewing)}
           onDelete={() => {
-            remove(menuEvent.id);
-            setMenuEvent(null);
+            remove(viewing.id);
+            setViewing(null);
           }}
         />
       ) : null}
