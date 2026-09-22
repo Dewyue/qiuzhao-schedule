@@ -74,6 +74,21 @@
   .page-break { page-break-before: auto; }
   code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 8pt; }
   .footer-note { font-size: 8pt; color: #6e6e73; margin-top: 8pt; }
+  .showcase { margin: 6pt 0 4pt; page-break-inside: avoid; }
+  .showcase img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border: 1px solid #e8e8ed;
+    border-radius: 4px;
+    margin: 0 0 2pt;
+  }
+  .showcase .cap {
+    font-size: 8pt;
+    color: #6e6e73;
+    margin: 0 0 7pt;
+    line-height: 1.35;
+  }
   pre {
     background: #f5f5f7;
     border: 1px solid #e8e8ed;
@@ -394,7 +409,16 @@
 
 <!-- ============================================================ -->
 <h2>附录 · 产品概述</h2>
-<p>秋招日程面向求职排期场景，将「空闲是否可排、是否冲突」作为主问题，而不是传统日历的事件列表。产品提供今天 / 明天 / 本周占用轴、可点击空闲、冲突分道、测评笔试面试双选会等记账形态，以及截止占用、长按拖动改时与本机 JSON 备份。部署形态为静态站点 + 浏览器本地存储，当前发布地址见文档封面。</p>
+<p>秋招日程把「空闲能不能排、会不会撞车」放在第一位：占用轴可见空闲、冲突分道标红；支持测评 / 笔试 / 面试 / 双选会及截止占用；长按拖动改时，点按编辑删除；数据本机存储，JSON 可备份迁移。线上地址见封面。</p>
+
+<div class="showcase">
+  <img src="screenshots/overview-conflict-data.jpg" alt="撞车、当日列表、数据月历与备份" />
+  <p class="cap">图 1：占用轴与撞车分道、当日列表；数据页统计 / 月历 / 查找与 JSON 导入导出。</p>
+</div>
+<div class="showcase">
+  <img src="screenshots/overview-schedule-record.jpg" alt="空闲、详情、截止表单、本周视图" />
+  <p class="cap">图 2：空闲标签与详情编辑删除；截止前记录表单；本周七天占用总览。</p>
+</div>
 
 <p class="footer-note">— 文档结束 · 秋招日程 PRD V3.1 · 2026-09-23 · 产品负责人：王悦 —</p>
 
