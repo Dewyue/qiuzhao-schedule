@@ -44,25 +44,11 @@
 
 ## 界面总览
 
-占用和空闲在同一根时间柱上。待定挂在当天顶部；撞车并排标出。点色块看详情（浮窗里编辑 / 删除）；**长按色块上下拖**改整段占用时间。
+占用和空闲在同一根时间柱上。待定挂在当天顶部；撞车并排标出。点色块看详情（浮窗里编辑 / 删除）；**长按色块上下拖**改整段占用时间。数据页有月历、查找与 JSON 备份。
 
-![今天：占用轴、撞车、当日列表](docs/screenshots/today-occupancy.jpg)
+![撞车分道、当日列表、数据月历与备份](docs/screenshots/overview-conflict-data.jpg)
 
-本周从今天起往后七天，窄色块点开浮窗。
-
-![本周色块与场次浮窗](docs/screenshots/week-blocks.jpg)
-
-只有截止、不拉色块时，在轴上打钉（不吃空闲）。
-
-![明天：截止标记](docs/screenshots/deadline-pins.jpg)
-
-记录按类型裁剪字段。
-
-![四种记录表单](docs/screenshots/record-types.jpg)
-
-数据页：整月日历、关键词查找、JSON 备份。
-
-![数据管理：月历、查找、备份](docs/screenshots/data-month.jpg)
+![空闲标签、详情编辑删除、截止记录表单、本周七天](docs/screenshots/overview-schedule-record.jpg)
 
 ---
 
