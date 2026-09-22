@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>秋招日程 · 产品需求文档（PRD）最终版</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm 20mm; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "PingFang SC", "Hiragino Sans GB", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    color: #1d1d1f;
+    font-size: 10.5pt;
+    line-height: 1.55;
+    max-width: 210mm;
+    margin: 0 auto;
+    padding: 12mm 14mm 16mm;
+  }
+  h1 { font-size: 20pt; letter-spacing: -0.02em; margin: 0 0 6pt; }
+  h2 {
+    font-size: 13.5pt;
+    margin: 22pt 0 8pt;
+    padding-bottom: 4pt;
+    border-bottom: 1.5px solid #1d1d1f;
+    page-break-after: avoid;
+  }
+  h3 { font-size: 11.5pt; margin: 14pt 0 6pt; page-break-after: avoid; }
+  h4 { font-size: 10.5pt; margin: 10pt 0 4pt; color: #333; }
+  p { margin: 0 0 8pt; }
+  ul, ol { margin: 0 0 10pt; padding-left: 1.25em; }
+  li { margin: 2pt 0; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0 0 12pt;
+    font-size: 9.5pt;
+    page-break-inside: avoid;
+  }
+  th, td {
+    border: 1px solid #d2d2d7;
+    padding: 5pt 6pt;
+    vertical-align: top;
+    text-align: left;
+  }
+  th { background: #f5f5f7; font-weight: 600; }
+  .meta { color: #6e6e73; font-size: 9.5pt; margin-bottom: 14pt; }
+  .cover {
+    border: 1px solid #e8e8ed;
+    background: #fafafa;
+    border-radius: 8px;
+    padding: 14pt 16pt;
+    margin: 12pt 0 18pt;
+  }
+  .cover p { margin: 3pt 0; }
+  .quote {
+    border-left: 3px solid #0a4fd8;
+    padding: 6pt 10pt;
+    margin: 8pt 0 12pt;
+    background: #f5f8ff;
+    color: #1d1d1f;
+  }
+  .tag {
+    display: inline-block;
+    font-size: 8.5pt;
+    padding: 1pt 6pt;
+    border-radius: 999px;
+    background: #e8effc;
+    color: #0a4fd8;
+    margin-right: 4pt;
+  }
+  .warn { color: #b42318; }
+  .ok { color: #0a7a3e; }
+  .muted { color: #6e6e73; }
+  .page-break { page-break-before: always; }
+  code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9pt; }
+  .footer-note { font-size: 9pt; color: #6e6e73; margin-top: 18pt; }
+  pre {
+    background: #f5f5f7;
+    border: 1px solid #e8e8ed;
+    border-radius: 6px;
+    padding: 8pt 10pt;
+    font-size: 8.5pt;
+    overflow: hidden;
+    white-space: pre-wrap;
+  }
+</style>
+</head>
+<body>
+
+<h1>秋招日程 · 产品需求文档（PRD）</h1>
+<p class="meta">最终完整版 · 产品经理视角 · 从立项起点到上线验收</p>
+
+<div class="cover">
+  <p><strong>产品名称：</strong>秋招日程（qiuzhao-schedule）</p>
+  <p><strong>文档版本：</strong>V3.0 Final</p>
+  <p><strong>文档性质：</strong>需求规格 / 决策记录 / 验收依据（非对外营销文案）</p>
+  <p><strong>文档状态：</strong>对应当前已上线 <span class="mono">main</span>（GitHub Pages）</p>
+  <p><strong>产品负责人：</strong>王月（独立产品设计与需求定义）</p>
+  <p><strong>实现协作：</strong>AI 辅助工程实现；需求与验收由产品侧把关</p>
+  <p><strong>上线地址：</strong>https://dewyue.github.io/qiuzhao-schedule/</p>
+  <p><strong>代码仓库：</strong>https://github.com/Dewyue/qiuzhao-schedule</p>
+  <p><strong>成文日期：</strong>2026-09-23</p>
+</div>
+
+<p>本文按<strong>产品经理立项与迭代顺序</strong>书写：先问题与目标，再范围与规则，再功能与验收，最后附上线复盘与作品展示用产品介绍。若与代码冲突，以已发布代码为准并回改本文。</p>
+
+<!-- ============================================================ -->
+<h2>1. 立项起点：我们要解决什么</h2>
+
+<h3>1.1 项目缘起</h3>
+<p>秋招期间，测评、笔试、面试、双选会信息密集到达，时间经常变更。用户真正打开日历时，核心问题不是「我记了哪些事件」，而是：</p>
+<div class="quote">这段时间还空吗？再接一场会不会撞车？只有 DDL / 待定 / 只知开考时，该怎么记才不会把空闲「吃假」？</div>
+<p>市面日历把<strong>事件</strong>当主角，空白只是底图。本项目从立项第一天起，就把主角定为：<strong>占用 vs 空闲</strong>。</p>
+
+<h3>1.2 问题定义（Problem Statement）</h3>
+<table>
+  <tr><th>ID</th><th>问题</th><th>用户表现</th><th>若不解决的后果</th></tr>
+  <tr><td>P1</td><td>空闲不可见、不可操作</td><td>靠肉眼估「中间空多久」</td><td>排期凭感觉，易过载</td></tr>
+  <tr><td>P2</td><td>场次形态复杂</td><td>DDL、待定、开考、限时被揉成同一种会议</td><td>空闲被虚假占用，或关键截止丢失</td></tr>
+  <tr><td>P3</td><td>冲突发现滞后</td><td>多场重叠叠在一起</td><td>临场撞车，错过改期窗口</td></tr>
+  <tr><td>P4</td><td>隐私与迁移</td><td>不愿登录云同步；换机要带走数据</td><td>不敢用或数据散落</td></tr>
+  <tr><td>P5</td><td>改时间成本高</td><td>只能进表单改起止</td><td>手机上「挪一下」摩擦大</td></tr>
+</table>
+
+<h3>1.3 目标用户</h3>
+<ul>
+  <li><strong>主用户：</strong>秋招 / 春招中的应届或往届求职者（高频、移动端为主）。</li>
+  <li><strong>次用户：</strong>密集安排多场招聘节点的转岗求职者。</li>
+</ul>
+
+<h3>1.4 产品目标与成功标准</h3>
+<table>
+  <tr><th>目标</th><th>可验收成功标准</th></tr>
+  <tr><td>空闲可经营</td><td>打开「今天」，约 3 秒内能分清已占与空闲；空闲标签可点并预填新建</td></tr>
+  <tr><td>冲突可一眼出</td><td>重叠场次并排分道，有冲突描边 / 「撞车」文案</td></tr>
+  <tr><td>形态可正确记账</td><td>限时 / 截止 / 待定 / 开考语义分离；截止类既保留 DDL 又能量化占用</td></tr>
+  <tr><td>改期够快</td><td>长按拖动改占用时段；点按详情可编辑删除</td></tr>
+  <tr><td>数据可控</td><td>默认本机存储；JSON 可导出导入完成换机</td></tr>
+</table>
+
+<h3>1.5 非目标（立项即写死）</h3>
+<ul>
+  <li>不做账号体系、云同步、多端实时一致。</li>
+  <li>不做企业招聘官端、官网/邮件自动抓取排期。</li>
+  <li>不做多人协作、甘特、项目看板。</li>
+  <li>不做原生 App Store / 系统 Widget（可讨论，非本站范围）。</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2>2. 产品原则（从起点钉死）</h2>
+<table>
+  <tr><th>原则</th><th>含义</th><th>对设计的约束</th></tr>
+  <tr><td>空闲是一等公民</td><td>空白不是「没画东西」</td><td>空闲必须可被看见、点到、预填</td></tr>
+  <tr><td>事件不拥有整列</td><td>时间柱属于「一天的可用性」</td><td>禁止事件列表压过占用轴主叙事</td></tr>
+  <tr><td>秋招语义优先</td><td>字段贴合测评/笔试/面试/双选会</td><td>禁止通用「会议」模板硬套</td></tr>
+  <tr><td>本机优先</td><td>隐私默认正确</td><td>无登录即可用；迁移靠导出</td></tr>
+  <tr><td>手机一等体验</td><td>竖屏、单手、少层级</td><td>三 Tab；关键操作不靠桌面悬停</td></tr>
+  <tr><td>可替换领域词</td><td>占格模型可迁移到预约/排班</td><td>逻辑层与词汇层分离（后续白牌）</td></tr>
+</table>
+<p>视觉世界（材质、字体、禁用项）见仓库 <span class="mono">DESIGN.md</span>：白底 + <span class="mono">#f5f5f7</span> 浅轨，强调色 <span class="mono">#0a4fd8</span>，危险色仅用于冲突。</p>
+
+<!-- ============================================================ -->
+<h2>3. 范围演进：从 0 到 1 的需求切片</h2>
+<p>下列里程碑按真实交付顺序回写，便于理解「为什么最终规则长这样」。</p>
+<table>
+  <tr><th>切片</th><th>要交付的能力</th><th>产品决策</th></tr>
+  <tr><td>M0 骨架</td><td>Vite + React + TS + Tailwind；日程三 Tab；本地增删改</td><td>静态站 + 本机存储，先跑通闭环</td></tr>
+  <tr><td>M1 占用差集</td><td>时间柱、空闲标签、撞车分道、今/明/周</td><td>本周 = 从<strong>当天</strong>起 7 天，不是周一对齐</td></tr>
+  <tr><td>M2 秋招形态</td><td>测评/笔试/面试/双选会；DDL 钉、待定、开考钉</td><td>形态决定是否吃空闲</td></tr>
+  <tr><td>M3 数据页</td><td>月历、搜索、JSON；LS + IDB + SW</td><td>导入为整表替换；强调备份</td></tr>
+  <tr><td>M4 截止占格</td><td><span class="mono">deadline</span> 属性 + 默认时长倒推占用</td><td>截止是属性，不是唯一时间点；面试「截止前」同理</td></tr>
+  <tr><td>M5 拖动改时</td><td>长按跟手拖；详情承接编辑删除</td><td>废止长按菜单；滚动让给白边/非色块区</td></tr>
+  <tr><td>M6 打磨上线</td><td>06:00–24:00；圆角裁线；README/PRD/截图</td><td>Pages 推 main 即发</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<div class="page-break"></div>
+<h2>4. 信息架构与关键用户路径</h2>
+
+<h3>4.1 信息架构</h3>
+<table>
+  <tr><th>层级</th><th>模块</th><th>职责</th></tr>
+  <tr><td>Tab</td><td>日程</td><td>范围切换、摘要、时间柱、（今明）当日列表</td></tr>
+  <tr><td>Tab</td><td>记录</td><td>新建 / 编辑表单</td></tr>
+  <tr><td>Tab</td><td>数据</td><td>统计、月历、查找、JSON 备份</td></tr>
+  <tr><td>浮层</td><td>详情</td><td>查看；编辑；删除</td></tr>
+</table>
+
+<h3>4.2 范围切换</h3>
+<table>
+  <tr><th>模式</th><th>日期含义</th><th>展示差异</th></tr>
+  <tr><td>今天</td><td>当天</td><td>宽色块 + 当日列表 + 现在线</td></tr>
+  <tr><td>明天</td><td>次日</td><td>同今天结构</td></tr>
+  <tr><td>本周</td><td>从当天起连续 7 天</td><td>七列窄色块；点开浮窗看详情</td></tr>
+</table>
+<p>摘要行需汇总：占用场数、截止钉数、开考钉数、待定数、最长空闲、重合处数。</p>
+
+<h3>4.3 核心路径（验收用）</h3>
+<ol>
+  <li><strong>看空闲：</strong>打开今天 → 读摘要与空闲标签 → 判断能否再接一场。</li>
+  <li><strong>从空闲记下：</strong>点「空 ×」或灰底 → 记录页预填开始 → 保存回日程见色块。</li>
+  <li><strong>发现撞车：</strong>两场重叠 → 并排 + 描红 / 「撞车」→ 点开改期或删除。</li>
+  <li><strong>记截止提交：</strong>选截止模式 → 填截止与默认时长 → 色块占格且详情保留截止。</li>
+  <li><strong>手机挪时间：</strong>长按色块拖动 → 松手落分钟 → 时长不变。</li>
+  <li><strong>换机备份：</strong>数据页导出 JSON → 新设备导入。</li>
+</ol>
+
+<!-- ============================================================ -->
+<h2>5. 数据模型（产品规格）</h2>
+
+<h3>5.1 事件实体 RecruitEvent</h3>
+<table>
+  <tr><th>字段</th><th>类型</th><th>产品含义</th></tr>
+  <tr><td>id</td><td>string</td><td>本地唯一标识</td></tr>
+  <tr><td>company</td><td>string</td><td>公司 / 双选会企业名</td></tr>
+  <tr><td>type</td><td>assessment | exam | interview | jobfair | other</td><td>业务类型</td></tr>
+  <tr><td>title</td><td>string</td><td>场次等（一面/二面/终面）；截止类可为「截止」</td></tr>
+  <tr><td>start / end</td><td>ISO 时间</td><td>时间轴占用或标记区间</td></tr>
+  <tr><td>deadline</td><td>ISO 时间?</td><td>公司给出的截止时刻；可与 end 分离</td></tr>
+  <tr><td>location</td><td>string?</td><td>面试 / 双选会地点</td></tr>
+  <tr><td>notes</td><td>string?</td><td>备注</td></tr>
+  <tr><td>kind</td><td>slot | deadline | allday | open</td><td>怎么记</td></tr>
+</table>
+
+<h3>5.2 kind 与是否占用空闲</h3>
+<table>
+  <tr><th>kind</th><th>含义</th><th>是否占格（occupiesTime）</th></tr>
+  <tr><td>slot</td><td>明确时段</td><td>是</td></tr>
+  <tr><td>deadline</td><td>截止类</td><td>起止跨度 &gt; 2 分钟 → 占格；否则仅轴上钉</td></tr>
+  <tr><td>open</td><td>只知开考</td><td>否（钉）</td></tr>
+  <tr><td>allday</td><td>当天待定</td><td>否（挂当天顶）</td></tr>
+</table>
+
+<h3>5.3 导出契约</h3>
+<pre>{
+  "app": "qiuzhao-schedule",
+  "exportedAt": "&lt;ISO&gt;",
+  "events": [ /* RecruitEvent[] */ ]
+}</pre>
+<p>导入：规范化 type / kind；旧数据无 deadline 时按跨度推断（长跨度取 end，短标记取 start）。导入为<strong>整表替换</strong>。</p>
+
+<!-- ============================================================ -->
+<div class="page-break"></div>
+<h2>6. 功能需求规格</h2>
+
+<h3>6.1 时间柱</h3>
+<table>
+  <tr><th>ID</th><th>需求</th><th>验收要点</th></tr>
+  <tr><td>F-AXIS-1</td><td>默认时间窗 06:00–24:00；内容可扩但仍夹在 0–24</td><td>空日可见 6 点到 24 点</td></tr>
+  <tr><td>F-AXIS-2</td><td>浅底可点；按 Y 吸附约 15 分钟预填新建</td><td>点空白进记录且开始合理</td></tr>
+  <tr><td>F-AXIS-3</td><td>足够长的空隙显示「空 {时长}」并可点</td><td>文案与分钟数一致</td></tr>
+  <tr><td>F-AXIS-4</td><td>占用色块按类型着色；密时降密度</td><td>周视图窄块仍可辨色</td></tr>
+  <tr><td>F-AXIS-5</td><td>重叠占用并排分道并标冲突</td><td>同刻两场可见并排 + 危险描边</td></tr>
+  <tr><td>F-AXIS-6</td><td>今天显示「现在」红线</td><td>位于当前时刻</td></tr>
+  <tr><td>F-AXIS-7</td><td>顶底不画穿圆角的小时线；灰柱 overflow 裁剪</td><td>圆角无「线头」</td></tr>
+  <tr><td>F-AXIS-8</td><td>日头显示占用百分比或「撞车」</td><td>有冲突时优先撞车</td></tr>
+</table>
+
+<h3>6.2 记录：类型 × 怎么记</h3>
+<h4>测评</h4>
+<table>
+  <tr><th>模式</th><th>要点</th><th>占格</th></tr>
+  <tr><td>限时场次</td><td>开始 + 结束（或时长）</td><td>是</td></tr>
+  <tr><td>截止提交</td><td>截止、默认时长、开始、结束（见 6.3）</td><td>是</td></tr>
+</table>
+<h4>笔试</h4>
+<table>
+  <tr><th>模式</th><th>要点</th><th>占格</th></tr>
+  <tr><td>限时场次</td><td>明确时段</td><td>是</td></tr>
+  <tr><td>只知开考</td><td>开考时刻</td><td>否，钉</td></tr>
+  <tr><td>截止提交</td><td>同测评截止</td><td>是</td></tr>
+</table>
+<h4>面试</h4>
+<table>
+  <tr><th>模式</th><th>要点</th><th>占格</th></tr>
+  <tr><td>已约时段</td><td>开始、时长/结束；一面/二面/终面；可选地点</td><td>是</td></tr>
+  <tr><td>当天待定</td><td>日期</td><td>否，挂顶</td></tr>
+  <tr><td>截止前</td><td>与截止提交同规则</td><td>是</td></tr>
+</table>
+<h4>双选会</h4>
+<p>企业名、开始、结束、可选地点；按时段占格。</p>
+
+<h3>6.3 关键业务规则：截止提交 / 面试截止前</h3>
+<p><span class="tag">产品语义</span> 截止是公司属性；占用块是自己计划用来写卷 / 准备的时间。</p>
+<table>
+  <tr><th>操作</th><th>规则</th></tr>
+  <tr><td>填截止 + 默认时长（默认 30 分）</td><td>开始 = 截止 − 时长；结束先 = 截止</td></tr>
+  <tr><td>改开始</td><td>时长不变；结束 = 开始 + 时长；<strong>截止字段不变</strong></td></tr>
+  <tr><td>改默认时长（已有截止）</td><td>从截止再倒推开始；结束对齐截止</td></tr>
+  <tr><td>展示</td><td>色块画 start→end；详情另显「截止 …」</td></tr>
+  <tr><td>拖动平移占用块</td><td>时长不变；占格截止类的 <span class="mono">deadline</span> <strong>不随拖动平移</strong></td></tr>
+</table>
+<p>兼容：旧数据仅 1 分钟钉时，编辑截止类按默认时长展开为可占格草稿；保存后持久占格。</p>
+
+<h3>6.4 手势：点按 vs 长按拖动</h3>
+<table>
+  <tr><th>手势</th><th>对象</th><th>行为</th></tr>
+  <tr><td>短按</td><td>色块 / 列表 / 月历行 / 搜索行</td><td>打开详情浮窗</td></tr>
+  <tr><td>浮窗操作</td><td>—</td><td>编辑、删除、关闭</td></tr>
+  <tr><td>长按约 200ms 后拖</td><td>占用色块、轴上钉</td><td>纵向像素跟手；松手吸附到分钟并保存</td></tr>
+  <tr><td>拖动中</td><td>—</td><td>锁文档滚动；关闭 transform 缓动</td></tr>
+  <tr><td>页面滚动</td><td>底部白边、灰柱非色块区、空闲标签</td><td>正常上下滑</td></tr>
+</table>
+<p class="warn"><strong>废止：</strong>长按弹出「编辑 / 删除」菜单（与拖动手势冲突）。</p>
+
+<h3>6.5 详情浮窗</h3>
+<p>展示：类型与模式文案、公司、占用时段、截止（若有）、地点、备注。<br/>
+编辑 → 记录 Tab 带草稿；删除 → 本机移除（无回收站）。</p>
+
+<h3>6.6 数据页</h3>
+<table>
+  <tr><th>模块</th><th>需求</th></tr>
+  <tr><td>统计</td><td>过去 / 今天 / 未来；已完成 / 未完成</td></tr>
+  <tr><td>月历</td><td>灰点完成、蓝点未完成；今日强调；点日看列表</td></tr>
+  <tr><td>查找</td><td>公司、场次、地点、备注、类型等；全部/未完成/已完成；按日分组</td></tr>
+  <tr><td>备份</td><td>导出 JSON；导入 JSON 整表替换</td></tr>
+</table>
+
+<h3>6.7 持久化与离线</h3>
+<table>
+  <tr><th>项</th><th>要求</th></tr>
+  <tr><td>写入</td><td>变更后写 localStorage，并异步写 IndexedDB</td></tr>
+  <tr><td>启动</td><td>有 LS 用 LS 并回填 IDB；LS 空则用 IDB</td></tr>
+  <tr><td>持久化意图</td><td>可调用 storage.persist()</td></tr>
+  <tr><td>SW</td><td>缓存静态资源，支撑「加到主屏幕」</td></tr>
+  <tr><td>发布</td><td>推送 main → GitHub Pages 自动部署</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<div class="page-break"></div>
+<h2>7. 非功能需求</h2>
+<table>
+  <tr><th>类别</th><th>要求</th></tr>
+  <tr><td>性能</td><td>单机数百场内，今天/周视图拖动跟手</td></tr>
+  <tr><td>兼容</td><td>现代移动 Safari / Chrome；竖屏一等</td></tr>
+  <tr><td>隐私</td><td>无账号；不上传日程正文到自有后端</td></tr>
+  <tr><td>可维护</td><td>占格/空闲模型与秋招词汇可分离，便于预约/排班白牌</td></tr>
+  <tr><td>文档</td><td>README 对外说明；本 PRD 作需求与验收依据</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2>8. 上线逻辑复盘（2026-09-23）</h2>
+<p>对本轮已上线主路径做一致性检查，结论如下。</p>
+
+<h3>8.1 已理顺（保持）</h3>
+<table>
+  <tr><th>链路</th><th>结论</th></tr>
+  <tr><td>空闲 → 新建 → 占格 → 摘要/撞车</td><td class="ok">闭环一致，空闲差集只吃 occupiesTime</td></tr>
+  <tr><td>截止属性 + 默认时长倒推 + 改开始保时长</td><td class="ok">测评/笔试/面试截止前规则对齐</td></tr>
+  <tr><td>拖动保时长；占格截止不拖走 deadline</td><td class="ok">与「截止是属性」一致</td></tr>
+  <tr><td>点按详情含编辑删除；长按只负责拖</td><td class="ok">手势分工清晰</td></tr>
+  <tr><td>本周从今天起 7 天；窗 06–24；圆角裁线</td><td class="ok">与最终交互决策一致</td></tr>
+  <tr><td>LS + IDB + SW + Pages 自动发</td><td class="ok">上线路径可复现</td></tr>
+</table>
+
+<h3>8.2 已知取舍（非缺陷，但需在需求里诚实写出）</h3>
+<table>
+  <tr><th>取舍</th><th>影响</th><th>产品态度</th></tr>
+  <tr><td>色块吞纵向手势</td><td>在色块上滑易进拖动/锁滚</td><td>滚动依赖底部白边与非色块区；已在文案提示</td></tr>
+  <tr><td>导入整表替换</td><td>误导入会覆盖本机全部</td><td>接受；导出是前置习惯；未来可做合并策略</td></tr>
+  <tr><td>删除无回收站</td><td>误删不可恢复（除非有导出）</td><td>接受轻量工具定位</td></tr>
+  <tr><td>完成态偏时间推断</td><td>无手动「已完成」勾选</td><td>本期够用；可进 backlog</td></tr>
+  <tr><td>拖动不跨天</td><td>只能在当日内平移</td><td>符合「一天一柱」；跨天请编辑</td></tr>
+  <tr><td>旧 1 分钟钉截止</td><td>需编辑保存才展开占格</td><td>兼容策略；新数据默认占格</td></tr>
+</table>
+
+<h3>8.3 代码旁路备注（不影响主路径验收）</h3>
+<ul>
+  <li>表单里非 timedDeadline 的截止提示文案仍有「只记 DDL 不占空闲」分支，但测评/笔试/面试截止模式均已走 timedDeadline，该分支对当前表单路径基本不可达。</li>
+  <li>周视图窄色块信息密度低，依赖点开浮窗——与「本周总览」目标一致。</li>
+</ul>
+<p><strong>复盘结论：</strong>主产品逻辑已理顺，可支撑对外演示与作品集陈述；上表取舍应作为诚实边界，而不是隐藏问题。</p>
+
+<!-- ============================================================ -->
+<h2>9. 验收清单（发布门禁）</h2>
+<ul>
+  <li>□ 今天视图可见 06–24 与空闲标签</li>
+  <li>□ 点空闲 / 灰底可预填新建并保存回柱</li>
+  <li>□ 两场重叠并排且冲突可辨</li>
+  <li>□ 测评/笔试/面试截止类：四字段齐全，倒推与改开始规则正确，色块占格，详情显示截止</li>
+  <li>□ 长按拖动跟手，松手后已持久化；拖时整页不乱跳</li>
+  <li>□ 点开可编辑、删除</li>
+  <li>□ 导出后再导入，kind / deadline 关键语义不丢</li>
+  <li>□ 加到主屏幕后刷新，常态路径数据仍在</li>
+  <li>□ 推 main 后 Pages 可访问最新构建</li>
+</ul>
+
+<h2>10. Backlog（不承诺排期）</h2>
+<ul>
+  <li>领域白牌：预约 / 排班词汇与类型配置化</li>
+  <li>导入合并策略、删除确认 / 回收</li>
+  <li>手动完成态；系统提醒或日历订阅导出</li>
+  <li>跨天拖动或「移到另一天」快捷操作</li>
+  <li>桌面加宽信息架构优化</li>
+</ul>
+
+<!-- ============================================================ -->
+<div class="page-break"></div>
+<h2>附录 A · 最终产品介绍（作品展示用）</h2>
+<p class="muted">以下面向招聘官 / 作品集读者，用「结果陈述」补齐文档完整度；正式需求仍以上文章节为准。</p>
+
+<h3>A.1 一句话</h3>
+<p><strong>秋招日程</strong>是一个把「空闲能不能排」放在第一位的求职时间工具：占用可见、空闲可点、冲突一眼出，数据只在本机，打开即用。</p>
+
+<h3>A.2 为什么值得被记住</h3>
+<ul>
+  <li><strong>问题抓得准：</strong>不是又做了一个日历，而是重写了秋招场景下的主问题。</li>
+  <li><strong>规则完整：</strong>限时、截止、待定、开考四种记账形态，和真实收到的信息匹配。</li>
+  <li><strong>移动体验闭环：</strong>点按看详情与编辑删除，长按拖动改期，手势分工经过迭代定稿。</li>
+  <li><strong>工程可交付：</strong>静态站 + 本机双写 + Pages 自动发布，个人项目也能稳定上线。</li>
+  <li><strong>可延展：</strong>占格模型可抽成预约/排班；秋招词汇可替换。</li>
+</ul>
+
+<h3>A.3 产品能力速览</h3>
+<table>
+  <tr><th>模块</th><th>能力</th></tr>
+  <tr><td>日程</td><td>今天 / 明天 / 本周时间柱；空闲标签；撞车分道；06–24 窗口</td></tr>
+  <tr><td>记录</td><td>测评 / 笔试 / 面试 / 双选会；截止倒推占用</td></tr>
+  <tr><td>交互</td><td>长按跟手拖时；详情编辑删除</td></tr>
+  <tr><td>数据</td><td>月历、搜索、JSON 备份；本机持久化</td></tr>
+</table>
+
+<h3>A.4 角色与贡献（作品集陈述建议）</h3>
+<ul>
+  <li><strong>产品：</strong>问题定义、原则、范围、关键规则（占用/截止/手势）、验收与复盘。</li>
+  <li><strong>设计：</strong>占用优先的信息架构与视觉约束（个人站气质，反课表隐喻）。</li>
+  <li><strong>落地：</strong>与 AI 结对实现；坚持推 main 即发、用真机路径打磨拖动与滚动。</li>
+</ul>
+
+<h3>A.5 访问</h3>
+<p>产品：https://dewyue.github.io/qiuzhao-schedule/<br/>
+仓库：https://github.com/Dewyue/qiuzhao-schedule</p>
+
+<p class="footer-note">— 文档结束 · 秋招日程 PRD V3.0 Final · 2026-09-23 —</p>
+
+</body>
+</html>
