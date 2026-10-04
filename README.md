@@ -1,6 +1,6 @@
 # 秋招日程
 
-打开即用：https://dewyue.github.io/qiuzhao-schedule/
+打开即用：https://qiuzhao.dewyue.com
 
 市面日历把**事件**当主角，空白只是底。秋招把信息砸过来时，真正要回答的是：这段还能不能排、会不会撞车。所以这里把 **占用 vs 空闲** 当主角——空闲是可点的一等对象，色块只是占用的结果。
 
@@ -194,7 +194,7 @@ npm run build   # tsc + vite build
 npm run preview
 ```
 
-推到 `main` 会走 GitHub Actions，发布到 GitHub Pages（`base` 在 CI 下为 `/qiuzhao-schedule/`）。
+推到 `main` 会走 GitHub Actions，发布到 GitHub Pages（自定义域名 `qiuzhao.dewyue.com`）。
 
 ---
 
