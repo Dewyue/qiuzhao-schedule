@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 
 export default defineConfig({
-  base: '/',
+  // Relative base keeps both github.io/qiuzhao-schedule/ and qiuzhao.dewyue.com working.
+  base: './',
   plugins: [react(), tailwindcss()],
 })
