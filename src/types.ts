@@ -1,4 +1,4 @@
-export type EventType = "assessment" | "exam" | "interview" | "jobfair" | "other";
+export type EventType = "assessment" | "exam" | "interview" | "other";
 
 export type EventKind = "slot" | "deadline" | "allday" | "open";
 

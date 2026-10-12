@@ -173,11 +173,19 @@ export function EventForm({
       return;
     }
     if (!(endDate.getTime() > startDate.getTime())) return;
-    const showLocation = type === "interview" || type === "jobfair";
+    const showLocation = type === "interview" || type === "other";
+    const freeTitle =
+      type === "other"
+        ? title.trim()
+        : type === "interview" && kind === "slot"
+          ? title
+          : kind === "deadline"
+            ? "截止"
+            : "";
     onSave({
       company: company.trim(),
       type,
-      title: type === "interview" && kind === "slot" ? title : kind === "deadline" ? "截止" : "",
+      title: freeTitle,
       start: startDate.toISOString(),
       end: endDate.toISOString(),
       deadline: kind === "deadline" ? startDate.toISOString() : undefined,
@@ -197,12 +205,12 @@ export function EventForm({
       </div>
 
       <label className="flex flex-col gap-1">
-        <span className="text-[13px] text-muted">{type === "jobfair" ? "企业名" : "公司"}</span>
+        <span className="text-[13px] text-muted">{type === "other" ? "名称" : "公司"}</span>
         <input
           required
           value={company}
           onChange={(e) => setCompany(e.target.value)}
-          placeholder={type === "jobfair" ? "企业 / 主办方" : "公司名称"}
+          placeholder={type === "other" ? "会议 / 活动 / 随便写" : "公司名称"}
           className={FIELD}
         />
       </label>
@@ -214,8 +222,8 @@ export function EventForm({
           onChange={(e) => {
             const next = e.target.value as EventType;
             setType(next);
-            if (next !== "interview") setTitle("");
-            if (next !== "interview" && next !== "jobfair") setLocation("");
+            if (next !== "interview" && next !== "other") setTitle("");
+            if (next !== "interview" && next !== "other") setLocation("");
             const allowed = kindModes(next).map((m) => m.id);
             const nextKind = allowed.includes(kind) ? kind : "slot";
             setKind(nextKind);
@@ -300,6 +308,18 @@ export function EventForm({
             ))}
           </div>
         </fieldset>
+      ) : null}
+
+      {type === "other" ? (
+        <label className="flex flex-col gap-1">
+          <span className="text-[13px] text-muted">说明</span>
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="可选，比如双选会 / 周会"
+            className={FIELD}
+          />
+        </label>
       ) : null}
 
       {timedDeadline ? (
@@ -401,7 +421,7 @@ export function EventForm({
         </>
       ) : null}
 
-      {type === "jobfair" ? (
+      {type === "other" ? (
         <label className="flex flex-col gap-1">
           <span className="text-[13px] text-muted">结束</span>
           <input
@@ -414,13 +434,13 @@ export function EventForm({
         </label>
       ) : null}
 
-      {type === "interview" || type === "jobfair" ? (
+      {type === "interview" || type === "other" ? (
         <label className="flex flex-col gap-1">
           <span className="text-[13px] text-muted">地点</span>
           <input
             value={location}
             onChange={(e) => setLocation(e.target.value)}
-            placeholder={type === "jobfair" ? "场馆 / 学校" : "线下面试 / 公司"}
+            placeholder={type === "other" ? "可选" : "线下面试 / 公司"}
             className={FIELD}
           />
         </label>

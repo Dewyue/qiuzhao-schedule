@@ -2,7 +2,7 @@ import type { EventType, RecruitEvent } from "../types";
 
 const KEY = "qiuzhao-schedule:events:v1";
 
-const TYPES: EventType[] = ["assessment", "exam", "interview", "jobfair", "other"];
+const TYPES: EventType[] = ["assessment", "exam", "interview", "other"];
 
 export type ExportPayload = {
   app: "qiuzhao-schedule";
@@ -55,7 +55,9 @@ function normalizeEvent(item: unknown, index: number): RecruitEvent {
   if (!company || Number.isNaN(new Date(start).getTime()) || Number.isNaN(new Date(end).getTime())) {
     throw new Error(`第 ${index + 1} 条缺少有效的公司或时间`);
   }
-  const type = TYPES.includes(row.type as EventType) ? (row.type as EventType) : "other";
+  // Legacy exports used "jobfair" (双选会); fold into free-form "other".
+  const rawType = row.type === "jobfair" ? "other" : row.type;
+  const type = TYPES.includes(rawType as EventType) ? (rawType as EventType) : "other";
   const kind =
     row.kind === "deadline" || row.kind === "allday" || row.kind === "open" ? row.kind : "slot";
   const startIso = new Date(start).toISOString();

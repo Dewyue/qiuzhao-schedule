@@ -33,7 +33,7 @@ export function EventSearch({
           e.kind === "deadline" ? "截止 ddl" : "",
           e.kind === "open" ? "开考 时长待定" : "",
           e.kind === "allday" ? "时间待定 当天" : "",
-          e.type === "jobfair" ? "双选会" : "",
+          e.type === "other" ? "其他" : "",
         ]
           .join(" ")
           .toLowerCase();

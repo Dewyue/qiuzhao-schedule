@@ -7,7 +7,6 @@ export const TYPE_LABEL: Record<RecruitEvent["type"], string> = {
   assessment: "测评",
   exam: "笔试",
   interview: "面试",
-  jobfair: "双选会",
   other: "其他",
 };
 
@@ -15,7 +14,7 @@ export const FORM_TYPES: RecruitEvent["type"][] = [
   "assessment",
   "exam",
   "interview",
-  "jobfair",
+  "other",
 ];
 
 export function eventKind(event: Pick<RecruitEvent, "kind">): RecruitEvent["kind"] {
