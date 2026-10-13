@@ -210,7 +210,7 @@ export function EventForm({
           required
           value={company}
           onChange={(e) => setCompany(e.target.value)}
-          placeholder={type === "other" ? "会议 / 活动 / 随便写" : "公司名称"}
+          placeholder={type === "other" ? "" : "公司名称"}
           className={FIELD}
         />
       </label>
@@ -313,12 +313,7 @@ export function EventForm({
       {type === "other" ? (
         <label className="flex flex-col gap-1">
           <span className="text-[13px] text-muted">说明</span>
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="可选，比如双选会 / 周会"
-            className={FIELD}
-          />
+          <input value={title} onChange={(e) => setTitle(e.target.value)} className={FIELD} />
         </label>
       ) : null}
 
@@ -440,7 +435,7 @@ export function EventForm({
           <input
             value={location}
             onChange={(e) => setLocation(e.target.value)}
-            placeholder={type === "other" ? "可选" : "线下面试 / 公司"}
+            placeholder={type === "other" ? "" : "线下面试 / 公司"}
             className={FIELD}
           />
         </label>
@@ -451,7 +446,7 @@ export function EventForm({
         <input
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder="可选"
+          placeholder={type === "other" ? "" : "可选"}
           className="h-9 rounded-[12px] bg-surface-muted px-3 text-[14px] outline-none"
         />
       </label>

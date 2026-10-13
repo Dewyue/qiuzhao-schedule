@@ -19,7 +19,7 @@ const TYPE_CLASS: Record<RecruitEvent["type"], string> = {
   interview: "bg-accent text-white",
   exam: "bg-[#1c1c1e] text-white",
   assessment: "bg-[#4a5d8c] text-white",
-  other: "bg-[#5e6e7a] text-white",
+  other: "bg-[#6a5a8f] text-white",
 };
 
 export function DayColumn({
