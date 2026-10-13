@@ -1,5 +1,5 @@
 ---
-description: Ship qiuzhao-schedule changes to GitHub Pages by default
+description: Ship qiuzhao-schedule to GitHub and Aliyun by default
 alwaysApply: true
 ---
 
@@ -8,5 +8,5 @@ alwaysApply: true
 After finishing a user-requested change in this project, commit and push to `main` without waiting to be asked, unless the user explicitly says not to ship yet.
 
 - Remote is SSH: `git@github.com:Dewyue/qiuzhao-schedule.git`
-- Pushing `main` triggers GitHub Pages
+- Pushing `main` triggers GitHub Actions: sync `dist` to Aliyun (`qiuzhao.dewyue.com`) and mirror to GitHub Pages
 - Keep the usual commit message quality; do not force-push

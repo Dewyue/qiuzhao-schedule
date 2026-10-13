@@ -194,7 +194,33 @@ npm run build   # tsc + vite build
 npm run preview
 ```
 
-推到 `main` 会走 GitHub Actions，发布到 GitHub Pages（自定义域名 `qiuzhao.dewyue.com`）。
+推到 `main` 会走 GitHub Actions：
+
+1. **国内站** `https://qiuzhao.dewyue.com`：rsync 到阿里云（稳定入口）
+2. **镜像** `https://dewyue.github.io/qiuzhao-schedule/`：GitHub Pages（海外备用）
+
+### 阿里云自动部署（只需配一次）
+
+仓库 → **Settings → Secrets and variables → Actions**，新增：
+
+| Secret | 含义 | 示例 |
+| --- | --- | --- |
+| `ALIYUN_HOST` | 服务器 IP | `8.159.128.193` |
+| `ALIYUN_USER` | SSH 用户 | `root` 或你的部署用户 |
+| `ALIYUN_SSH_KEY` | 部署用**私钥**全文 | `-----BEGIN ... PRIVATE KEY-----` |
+| `ALIYUN_PATH` | 网站根目录 | 如 `/var/www/qiuzhao`（以 nginx 配置为准） |
+| `ALIYUN_PORT` | 可选，默认 22 | `22` |
+
+服务器上：
+
+1. DNS 保持 `qiuzhao` **A 记录**指向这台机（不要 CNAME 到 github.io）。
+2. 把对应**公钥**写入该用户的 `~/.ssh/authorized_keys`。
+3. 确认 `ALIYUN_PATH` 就是 nginx 里 `qiuzhao.dewyue.com` 的 `root`。
+
+```bash
+# 在服务器上查站点目录
+sudo grep -R qiuzhao /etc/nginx/
+```
 
 ---
 

@@ -1,4 +1,4 @@
-name: Deploy GitHub Pages
+name: Deploy
 
 on:
   push:
@@ -11,7 +11,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
+  group: deploy
   cancel-in-progress: true
 
 jobs:
@@ -25,11 +25,48 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist
+          retention-days: 3
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
 
-  deploy:
+  # Domestic production: Aliyun nginx (qiuzhao.dewyue.com)
+  deploy-aliyun:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+      - name: Sync dist to Aliyun
+        env:
+          HOST: ${{ secrets.ALIYUN_HOST }}
+          USER: ${{ secrets.ALIYUN_USER }}
+          KEY: ${{ secrets.ALIYUN_SSH_KEY }}
+          PATH_REMOTE: ${{ secrets.ALIYUN_PATH }}
+          PORT: ${{ secrets.ALIYUN_PORT }}
+        run: |
+          set -euo pipefail
+          if [ -z "${HOST:-}" ] || [ -z "${USER:-}" ] || [ -z "${KEY:-}" ] || [ -z "${PATH_REMOTE:-}" ]; then
+            echo "::error::缺少阿里云部署 Secrets。请在仓库 Settings → Secrets 配置 ALIYUN_HOST / ALIYUN_USER / ALIYUN_SSH_KEY / ALIYUN_PATH"
+            exit 1
+          fi
+          mkdir -p ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          PORT="${PORT:-22}"
+          ssh-keyscan -p "$PORT" -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          rsync -avz --delete \
+            -e "ssh -i ~/.ssh/deploy_key -p $PORT -o StrictHostKeyChecking=yes" \
+            dist/ "${USER}@${HOST}:${PATH_REMOTE}/"
+
+  # Optional mirror: github.io (overseas; not for daily China use)
+  deploy-pages:
     needs: build
     runs-on: ubuntu-latest
     environment:
