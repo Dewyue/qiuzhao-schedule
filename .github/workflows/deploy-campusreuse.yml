@@ -1,0 +1,60 @@
+name: Deploy campusreuse.dewyue.com
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "public/campusreuse/**"
+      - ".github/workflows/deploy-campusreuse.yml"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ALIYUN_SSH_KEY
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sync static site and nginx vhost
+        env:
+          HOST: ${{ secrets.ALIYUN_HOST }}
+          USER: ${{ secrets.ALIYUN_USER }}
+          KEY: ${{ secrets.ALIYUN_SSH_KEY }}
+          PORT: ${{ secrets.ALIYUN_PORT }}
+        run: |
+          set -euo pipefail
+          if [ -z "${HOST:-}" ] || [ -z "${USER:-}" ] || [ -z "${KEY:-}" ]; then
+            echo "::error::缺少 ALIYUN_HOST / ALIYUN_USER / ALIYUN_SSH_KEY"
+            exit 1
+          fi
+          mkdir -p ~/.ssh
+          printf '%s' "$KEY" | sed 's/\r$//' | sed 's/\\n/\n/g' > ~/.ssh/deploy_key
+          [ -n "$(tail -c1 ~/.ssh/deploy_key)" ] && echo >> ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keygen -y -f ~/.ssh/deploy_key >/dev/null
+          PORT="${PORT:-22}"
+          ssh-keyscan -p "$PORT" -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          SSH="ssh -i ~/.ssh/deploy_key -p $PORT -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes"
+          $SSH "${USER}@${HOST}" 'mkdir -p /var/www/campusreuse'
+          rsync -avz --delete \
+            -e "$SSH" \
+            public/campusreuse/ "${USER}@${HOST}:/var/www/campusreuse/"
+          $SSH "${USER}@${HOST}" 'bash -s' <<'EOS'
+          set -euo pipefail
+          SITE=/etc/nginx/sites-available/campusreuse.dewyue.com
+          cat > "$SITE" <<'NGX'
+          server {
+            listen 80;
+            listen [::]:80;
+            server_name campusreuse.dewyue.com;
+            root /var/www/campusreuse;
+            index index.html;
+            location / { try_files $uri $uri/ /index.html; }
+          }
+          NGX
+          ln -sfn "$SITE" /etc/nginx/sites-enabled/campusreuse.dewyue.com
+          nginx -t
+          systemctl reload nginx
+          if command -v certbot >/dev/null 2>&1; then
+            certbot --nginx -d campusreuse.dewyue.com --non-interactive --agree-tos --redirect --keep-until-expiring || true
+          fi
+          EOS

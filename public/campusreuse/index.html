@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>同楼转手 · 南6</title>
+  <style>
+    :root {
+      --pine: #16352c;
+      --pine-ink: #0e221c;
+      --lamp: #eef1ea;
+      --ink: #141714;
+      --mute: #5c635c;
+      --tape: #e6b800;
+      --stamp: #c43c22;
+      --line: #c5ccc0;
+      --serif: "Songti SC", "STSong", "Noto Serif SC", serif;
+      --sans: -apple-system, "PingFang SC", "Noto Sans SC", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
+    body { background: var(--pine-ink); color: var(--ink); font: 16px/1.5 var(--sans); }
+    a { color: inherit; text-decoration: none; }
+    button, input { font: inherit; color: inherit; }
+    .shell { min-height: 100vh; display: grid; grid-template-rows: auto 1fr; }
+    .top {
+      background: var(--pine); color: var(--lamp);
+      display: flex; justify-content: space-between; align-items: end; gap: 16px;
+      padding: 14px 20px 12px; border-bottom: 4px solid var(--tape); flex-wrap: wrap;
+    }
+    .brand { font-family: var(--serif); font-size: 22px; font-weight: 700; }
+    .brand span { display: block; font-family: var(--sans); font-size: 12px; font-weight: 400; color: #d5ddd4; margin-top: 2px; }
+    .nav { display: flex; gap: 8px 14px; flex-wrap: wrap; align-items: center; font-size: 14px; }
+    .nav a[aria-current="page"] { border-bottom: 1px solid var(--tape); }
+    .who { color: var(--tape); }
+    .page { background: var(--lamp); padding: 24px 20px 48px; width: 100%; }
+    .wrap { max-width: 980px; margin: 0 auto; }
+    h1 { font-family: var(--serif); font-size: 32px; line-height: 1.2; margin: 0 0 8px; }
+    h2 { font-family: var(--serif); font-size: 20px; margin: 0; }
+    .lede { color: var(--mute); max-width: 62ch; margin: 0 0 20px; }
+    .btn { border: 1px solid var(--pine); background: var(--pine); color: var(--lamp); padding: 8px 14px; cursor: pointer; border-radius: 2px; }
+    .btn.tape { background: var(--tape); border-color: var(--tape); color: var(--pine-ink); }
+    .btn.ghost { background: transparent; color: var(--lamp); border-color: #8aa090; }
+    .gate-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin: 16px 0 24px; }
+    .persona { text-align: left; background: #fff; border: 1px solid var(--pine); padding: 12px; cursor: pointer; border-radius: 2px; }
+    .persona b { display: block; font-family: var(--serif); font-size: 18px; }
+    .persona small { color: var(--mute); }
+    .board { display: grid; grid-template-columns: 1fr 1fr; gap: 36px; }
+    @media (max-width: 800px) { .board { grid-template-columns: 1fr; } }
+    .col-h { display: flex; justify-content: space-between; border-bottom: 2px solid var(--pine); padding-bottom: 6px; margin-bottom: 4px; }
+    .ticket { display: grid; grid-template-columns: 72px 1fr auto; gap: 12px; padding: 12px 0; border-bottom: 1px dashed var(--line); cursor: pointer; }
+    .t-meta { font-size: 12px; color: var(--mute); }
+    .t-title { font-weight: 600; }
+    .t-body { color: var(--mute); font-size: 14px; margin-top: 4px; }
+    .tag { display: inline-block; font-size: 12px; padding: 1px 6px; border: 1px solid var(--ink); margin: 0 6px 4px 0; border-radius: 2px; }
+    .tag.leave { background: var(--tape); border-color: var(--tape); color: var(--pine-ink); }
+    .price { font-weight: 600; white-space: nowrap; }
+    .panel { background: #fff; border: 1px solid var(--line); padding: 16px; }
+    .detail { display: grid; grid-template-columns: 1.4fr .8fr; gap: 32px; }
+    @media (max-width: 800px) { .detail { grid-template-columns: 1fr; } }
+    .nums { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 20px 0; border-top: 2px solid var(--pine); border-bottom: 2px solid var(--pine); padding: 16px 0; }
+    .nums b { display: block; font-family: var(--serif); font-size: 36px; line-height: 1; }
+    .nums span { color: var(--mute); font-size: 13px; }
+    label { display: grid; gap: 6px; font-size: 14px; max-width: 280px; }
+    label span { color: var(--mute); }
+    input { background: #fff; border: 1px solid var(--pine); padding: 8px 10px; border-radius: 2px; }
+    .fail { color: var(--stamp); }
+    .note { font-size: 13px; color: var(--mute); margin-top: 28px; }
+  </style>
+</head>
+<body>
+<div class="shell" id="app"></div>
+<script>
+const CODE = "南6-循环";
+const PEOPLE = [
+  { id: "8201230101", name: "李沐", room: "512", year: 2027, role: "resident" },
+  { id: "8201240308", name: "周言", room: "308", year: 2028, role: "resident" },
+  { id: "8201230402", name: "陈可", room: "402", year: 2027, role: "steward" },
+  { id: "8201260115", name: "唐果", room: "115", year: 2026, role: "resident" },
+  { id: "8201250618", name: "何南", room: "618", year: 2026, role: "resident" }
+];
+const ITEMS = [
+  { id: 1, kind: "offer", cat: "风扇", deal: "转手", price: "35 元", leave: 1, room: "618", title: "落地扇，三年，能摇头", body: "离校。不想走闲鱼：运费比扇贵。门厅交。", loop: "技术循环 · 金属网可拆", avoid: 6.72, kg: 2.5 },
+  { id: 2, kind: "offer", cat: "教材", deal: "互换", price: "互换", leave: 0, room: "512", title: "高等数学同济七版上下", body: "笔记在空白处。想换线性代数或概率论。", loop: "技术循环 · 纸张再流通", avoid: 0.62, kg: 0.4 },
+  { id: 3, kind: "offer", cat: "厨具", deal: "白送", price: "白送", leave: 1, room: "115", title: "不锈钢小锅 + 锅盖", body: "毕业清柜。锅底有烧痕，能煮面。别让宿管清走。", loop: "技术循环 · 不锈钢留用", avoid: 1.9, kg: 0.7 },
+  { id: 4, kind: "offer", cat: "台灯", deal: "转手", price: "20 元", leave: 0, room: "512", title: "IKEA 黄台灯", body: "换了新灯。灯座正常。工作日晚上电梯厅。", loop: "技术循环 · 灯头可换", avoid: 2.35, kg: 0.8 },
+  { id: 5, kind: "want", cat: "电热水壶", deal: "愿收", price: "求", leave: 0, room: "308", title: "求一个能用的电热水壶", body: "预算 25。群里刷过两天没人回。", loop: "技术循环 · 整机留用", avoid: 3.08, kg: 0.9 },
+  { id: 6, kind: "want", cat: "收纳", deal: "白送", price: "求", leave: 0, room: "308", title: "求衣架 20 个，不买新的", body: "有人离校请直接挂门厅。", loop: "技术循环 · 单体塑料", avoid: 1.57, kg: 0.6 },
+  { id: 7, kind: "want", cat: "厨具", deal: "互换", price: "求", leave: 0, room: "402", title: "四楼想共用一只锅，不新买", body: "楼长帖。放值班室，用完洗。减的是一口新锅。", loop: "技术循环 · 不锈钢留用", avoid: 1.9, kg: 0.7 }
+];
+const KEY = "campusreuse-lite-user";
+function user() { try { return JSON.parse(sessionStorage.getItem(KEY) || "null"); } catch { return null; } }
+function setUser(u) { if (u) sessionStorage.setItem(KEY, JSON.stringify(u)); else sessionStorage.removeItem(KEY); }
+function hash() { return location.hash.replace(/^#/, "") || "/"; }
+function go(p) { location.hash = p; }
+
+function topbar(me, page) {
+  const n = (href, label) => `<a href="#${href}"${page === href ? ' aria-current="page"' : ""}>${label}</a>`;
+  if (!me) return `<header class="top"><div class="brand">同楼转手<span>南 6 栋值班板 · campusreuse.dewyue.com</span></div></header>`;
+  return `<header class="top">
+    <a class="brand" href="#/board">同楼转手<span>南 6 栋值班板 · 不邮寄 · 不当托儿</span></a>
+    <nav class="nav">${n("/board","值班板")}${n("/ledger","循环账")}
+      <span class="who">${me.room} ${me.name}${me.role === "steward" ? " · 本周楼长" : ""}</span>
+      <button class="btn ghost" type="button" data-act="leave">出楼</button>
+    </nav>
+  </header>`;
+}
+
+function gate() {
+  return `<div class="page"><div class="wrap">
+    <h1>南 6 栋，东西在楼里转。</h1>
+    <p class="lede">简略版，给组员远程打开。不是校内闲鱼：只核本栋身份，撮合出手和求购，交接在门厅。货款当面给。</p>
+    <p class="lede">本周楼长 陈可（402）。演示口令已填。</p>
+    <label><span>楼栋口令</span><input id="code" value="${CODE}" /></label>
+    <div class="gate-grid">${PEOPLE.map(p => `<button class="persona" type="button" data-enter="${p.id}"><b>${p.name}</b><small>${p.room} · ${p.year} 届${p.role==="steward"?" · 本周楼长":""}</small></button>`).join("")}</div>
+    <p class="fail" id="err"></p>
+    <p class="lede">毕业年后发帖权收回；楼长两周轮一次。没有人长期运营，只有这栋楼还在住。</p>
+  </div></div>`;
+}
+
+function tickets(list, tagWant) {
+  return list.map(it => `<div class="ticket" data-item="${it.id}">
+    <div class="t-meta">${it.room}<br>${it.cat}</div>
+    <div><span class="tag${tagWant ? " want" : ""}">${it.deal}</span>${it.leave ? '<span class="tag leave">离校</span>' : ""}<div class="t-title">${it.title}</div><div class="t-body">${it.body}</div></div>
+    <div class="price">${it.price}</div>
+  </div>`).join("");
+}
+
+function board() {
+  const offers = ITEMS.filter(i => i.kind === "offer");
+  const wants = ITEMS.filter(i => i.kind === "want");
+  return `<div class="page"><div class="wrap">
+    <h1>本栋值班板</h1>
+    <p class="lede">求购和出手对等。离校帖黄标。这是静态简略版，约交接请当面在门厅完成。</p>
+    <div class="board">
+      <section><div class="col-h"><h2>有人出手</h2><span class="t-meta">${offers.length} 张</span></div>${tickets(offers, false)}</section>
+      <section><div class="col-h"><h2>有人在找</h2><span class="t-meta">${wants.length} 张</span></div>${tickets(wants, true)}</section>
+    </div>
+  </div></div>`;
+}
+
+function item(id) {
+  const it = ITEMS.find(x => x.id === Number(id));
+  if (!it) return `<div class="page"><div class="wrap"><p>没有这张帖。<a href="#/board">回值班板</a></p></div></div>`;
+  return `<div class="page"><div class="wrap detail">
+    <div>
+      <p class="t-meta"><a href="#/board">值班板</a> / ${it.room}</p>
+      <h1>${it.title}</h1>
+      <p><span class="tag">${it.deal}</span>${it.leave ? '<span class="tag leave">离校窗口</span>' : ""}</p>
+      <p>${it.body}</p>
+      <p class="lede">${it.loop}</p>
+    </div>
+    <aside class="panel">
+      <p>代价：${it.price}</p>
+      <p>若转手成功：约 ${it.kg} kg 留用，避免新购 ${it.avoid} kgCO₂e（教学估算，置换率 0.56）。</p>
+      <p class="lede">简略版不经过服务器下单。门厅见面，当场试能不能用。</p>
+      <a class="btn tape" href="#/board">回值班板</a>
+    </aside>
+  </div></div>`;
+}
+
+function ledger() {
+  return `<div class="page"><div class="wrap">
+    <h1>南6 循环账</h1>
+    <p class="lede">功能单位：一件仍可使用的宿舍物品，在本栋转到下一位使用者。对照：丢掉 + 新买。主账是避免制造。下列为演示种子，不是实测。</p>
+    <div class="nums">
+      <div><b>0</b><span>已完成转手（简略版不记账）</span></div>
+      <div><b>6.6</b><span>板上物品合计 kg</span></div>
+      <div><b>18.1</b><span>若全部成交，避免新购 kgCO₂e</span></div>
+    </div>
+    <p class="lede">完整带档期与楼长台的版本在仓库 <code>prototypes/csu-swap</code>，需本地跑 Node。本页只保证线上能打开。</p>
+  </div></div>`;
+}
+
+function render() {
+  const me = user();
+  const h = hash();
+  const page = h.startsWith("/item/") ? "/item" : h;
+  let body = "";
+  if (!me && h !== "/") { go("/"); return; }
+  if (!me) body = gate();
+  else if (h === "/ledger") body = ledger();
+  else if (h.startsWith("/item/")) body = item(h.split("/")[2]);
+  else body = board();
+  document.getElementById("app").innerHTML = topbar(me, h === "/ledger" ? "/ledger" : "/board") + body;
+}
+
+document.getElementById("app").addEventListener("click", (e) => {
+  const leave = e.target.closest("[data-act=leave]");
+  if (leave) { setUser(null); go("/"); return; }
+  const ent = e.target.closest("[data-enter]");
+  if (ent) {
+    const code = document.getElementById("code")?.value?.trim();
+    if (code !== CODE) { document.getElementById("err").textContent = "口令不对。问值班室或本周楼长。"; return; }
+    setUser(PEOPLE.find(p => p.id === ent.dataset.enter));
+    go("/board");
+    return;
+  }
+  const t = e.target.closest("[data-item]");
+  if (t) go("/item/" + t.dataset.item);
+});
+window.addEventListener("hashchange", render);
+render();
+</script>
+</body>
+</html>
