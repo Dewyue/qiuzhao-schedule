@@ -35,9 +35,11 @@ jobs:
           path: dist
 
   # Domestic production: Aliyun nginx (qiuzhao.dewyue.com)
+  # Secrets live in environment "ALIYUN_SSH_KEY" (created in repo Settings → Environments).
   deploy-aliyun:
     needs: build
     runs-on: ubuntu-latest
+    environment: ALIYUN_SSH_KEY
     steps:
       - uses: actions/download-artifact@v4
         with:
