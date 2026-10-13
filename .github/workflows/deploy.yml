@@ -59,12 +59,22 @@ jobs:
             exit 1
           fi
           mkdir -p ~/.ssh
-          printf '%s\n' "$KEY" > ~/.ssh/deploy_key
+          # Normalize common paste issues: literal \n, CRLF, leading/trailing junk.
+          printf '%s' "$KEY" \
+            | sed 's/\r$//' \
+            | sed 's/\\n/\n/g' \
+            > ~/.ssh/deploy_key
+          # Ensure trailing newline (OpenSSH requires it)
+          [ -n "$(tail -c1 ~/.ssh/deploy_key)" ] && echo >> ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
+          if ! ssh-keygen -y -f ~/.ssh/deploy_key >/dev/null 2>&1; then
+            echo "::error::ALIYUN_SSH_KEY 不是有效私钥。请在服务器执行 cat ~/.ssh/qiuzhao_deploy，把私钥全文（含 BEGIN/END）重新贴进 Environment Secret。"
+            exit 1
+          fi
           PORT="${PORT:-22}"
           ssh-keyscan -p "$PORT" -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
           rsync -avz --delete \
-            -e "ssh -i ~/.ssh/deploy_key -p $PORT -o StrictHostKeyChecking=yes" \
+            -e "ssh -i ~/.ssh/deploy_key -p $PORT -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes" \
             dist/ "${USER}@${HOST}:${PATH_REMOTE}/"
 
   # Optional mirror: github.io (overseas; not for daily China use)
