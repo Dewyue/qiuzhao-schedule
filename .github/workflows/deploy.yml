@@ -73,9 +73,14 @@ jobs:
           fi
           PORT="${PORT:-22}"
           ssh-keyscan -p "$PORT" -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          SSH=(ssh -i ~/.ssh/deploy_key -p "$PORT" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes)
           rsync -avz --delete \
-            -e "ssh -i ~/.ssh/deploy_key -p $PORT -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes" \
+            -e "${SSH[*]}" \
             dist/ "${USER}@${HOST}:${PATH_REMOTE}/"
+          # nginx (www-data) must be able to traverse + read; rsync as deploy user
+          # can leave a tree www-data cannot stat → HTTP 500.
+          "${SSH[@]}" "${USER}@${HOST}" \
+            "chmod 755 '$(dirname "$PATH_REMOTE")' '$PATH_REMOTE' && chmod -R a+rX '$PATH_REMOTE' && (chown -R www-data:www-data '$PATH_REMOTE' 2>/dev/null || true) && sudo nginx -t 2>/dev/null; nginx -t 2>/dev/null; (sudo systemctl reload nginx || systemctl reload nginx || true)"
 
   # Optional mirror: github.io (overseas; not for daily China use)
   deploy-pages:
