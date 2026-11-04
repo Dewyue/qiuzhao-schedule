@@ -73,14 +73,24 @@ jobs:
           fi
           PORT="${PORT:-22}"
           ssh-keyscan -p "$PORT" -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
-          SSH=(ssh -i ~/.ssh/deploy_key -p "$PORT" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes)
+          SSH=(ssh -i ~/.ssh/deploy_key -p "$PORT" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=30)
           rsync -avz --delete \
             -e "${SSH[*]}" \
             dist/ "${USER}@${HOST}:${PATH_REMOTE}/"
-          # nginx (www-data) must be able to traverse + read; rsync as deploy user
-          # can leave a tree www-data cannot stat → HTTP 500.
-          "${SSH[@]}" "${USER}@${HOST}" \
-            "chmod 755 '$(dirname "$PATH_REMOTE")' '$PATH_REMOTE' && chmod -R a+rX '$PATH_REMOTE' && (chown -R www-data:www-data '$PATH_REMOTE' 2>/dev/null || true) && sudo nginx -t 2>/dev/null; nginx -t 2>/dev/null; (sudo systemctl reload nginx || systemctl reload nginx || true)"
+          # nginx (www-data) must traverse + read; otherwise stat() → Permission denied → HTTP 500.
+          "${SSH[@]}" "${USER}@${HOST}" bash -s -- "$PATH_REMOTE" <<'EOS'
+          set -euo pipefail
+          PATH_REMOTE="$1"
+          PARENT="$(dirname "$PATH_REMOTE")"
+          chmod 755 "$PARENT" "$PATH_REMOTE"
+          chmod -R a+rX "$PATH_REMOTE"
+          chown -R www-data:www-data "$PATH_REMOTE" 2>/dev/null || chown -R root:root "$PATH_REMOTE" 2>/dev/null || true
+          if command -v nginx >/dev/null 2>&1; then
+            nginx -t || sudo nginx -t || true
+            systemctl reload nginx 2>/dev/null || sudo systemctl reload nginx 2>/dev/null || true
+          fi
+          ls -lad "$PARENT" "$PATH_REMOTE"
+          EOS
 
   # Optional mirror: github.io (overseas; not for daily China use)
   deploy-pages:
