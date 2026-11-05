@@ -1,11 +1,14 @@
 import type { FormEvent } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { FORM_TYPES, TYPE_LABEL, isLooseType, toDatetimeLocal } from "../lib/time";
 import type { EventKind, EventType, RecruitEvent } from "../types";
 
 const ROUNDS = ["一面", "二面", "终面"] as const;
-const DURATION_MINUTES = Array.from({ length: 24 }, (_, i) => (i + 1) * 10);
 const DEFAULT_DDL_MINUTES = 30;
+const DURATION_PRESETS = [30, 45, 60, 90, 120, 180];
+const DURATION_MAX = 16 * 60;
+const DURATION_MIN = 15;
+const DURATION_STEP = 15;
 // ≥16px so iOS Safari does not auto-zoom on focus.
 const FIELD =
   "h-11 rounded-[12px] bg-surface-muted px-3 text-[16px] outline-none";
@@ -54,13 +57,6 @@ export function EventForm({
     setNotes(next.notes ?? "");
     setDuration(range.duration);
   }, [editing, draft]);
-
-  const durationOptions = useMemo(() => {
-    if (duration && !DURATION_MINUTES.includes(duration)) {
-      return [...DURATION_MINUTES, duration].sort((a, b) => a - b);
-    }
-    return DURATION_MINUTES;
-  }, [duration]);
 
   const timedSlot =
     kind === "slot" &&
@@ -330,20 +326,11 @@ export function EventForm({
               className={FIELD}
             />
           </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-[13px] text-muted">默认时长</span>
-            <select
-              value={duration || DEFAULT_DDL_MINUTES}
-              onChange={(e) => handleDurationForDeadline(Number(e.target.value))}
-              className={FIELD}
-            >
-              {durationOptions.map((mins) => (
-                <option key={mins} value={mins}>
-                  {labelDuration(mins)}
-                </option>
-              ))}
-            </select>
-          </label>
+          <DurationField
+            label="默认时长"
+            minutes={duration || DEFAULT_DDL_MINUTES}
+            onChange={handleDurationForDeadline}
+          />
           <label className="flex flex-col gap-1">
             <span className="text-[13px] text-muted">开始时间</span>
             <input
@@ -386,21 +373,11 @@ export function EventForm({
 
       {timedSlot ? (
         <>
-          <label className="flex flex-col gap-1">
-            <span className="text-[13px] text-muted">时长</span>
-            <select
-              value={duration || ""}
-              onChange={(e) => applyDurationForward(Number(e.target.value), start)}
-              className={FIELD}
-            >
-              <option value="">先选时长</option>
-              {durationOptions.map((mins) => (
-                <option key={mins} value={mins}>
-                  {labelDuration(mins)}
-                </option>
-              ))}
-            </select>
-          </label>
+          <DurationField
+            label="时长"
+            minutes={duration}
+            onChange={(mins) => applyDurationForward(mins, start)}
+          />
           <label className="flex flex-col gap-1">
             <span className="text-[13px] text-muted">结束</span>
             <input
@@ -574,10 +551,115 @@ function minutesBetween(startIso: string, endIso: string): number {
   return mins > 0 ? mins : 0;
 }
 
-function labelDuration(mins: number): string {
-  if (mins < 60) return `${mins} 分钟`;
+function clampDuration(mins: number): number {
+  return Math.max(DURATION_MIN, Math.min(DURATION_MAX, mins));
+}
+
+function DurationField({
+  label,
+  minutes,
+  onChange,
+}: {
+  label: string;
+  minutes: number;
+  onChange: (mins: number) => void;
+}) {
+  const value = minutes > 0 ? minutes : 0;
+  const hours = Math.floor(value / 60);
+  const mins = value % 60;
+
+  function setTotal(next: number) {
+    onChange(clampDuration(next));
+  }
+
+  function bumpHours(delta: number) {
+    setTotal((value || 0) + delta * 60);
+  }
+
+  function bumpMinutes(delta: number) {
+    const current = value || 0;
+    const rem = current % DURATION_STEP;
+    if (rem !== 0) {
+      setTotal(delta > 0 ? current + (DURATION_STEP - rem) : current - rem);
+      return;
+    }
+    setTotal(current + delta);
+  }
+
+  return (
+    <fieldset className="flex flex-col gap-2">
+      <legend className="text-[13px] text-muted">{label}</legend>
+      <div className="flex flex-wrap gap-2">
+        {DURATION_PRESETS.map((preset) => (
+          <button
+            key={preset}
+            type="button"
+            onClick={() => setTotal(preset)}
+            className={
+              value === preset
+                ? "h-10 rounded-[12px] bg-accent px-3 text-[14px] font-medium text-white"
+                : "h-10 rounded-[12px] bg-surface-muted px-3 text-[14px] font-medium"
+            }
+          >
+            {presetLabel(preset)}
+          </button>
+        ))}
+      </div>
+      <div className="flex gap-2">
+        <Stepper label="小时" display={String(hours)} onMinus={() => bumpHours(-1)} onPlus={() => bumpHours(1)} />
+        <Stepper
+          label="分钟"
+          display={String(mins).padStart(2, "0")}
+          onMinus={() => bumpMinutes(-DURATION_STEP)}
+          onPlus={() => bumpMinutes(DURATION_STEP)}
+        />
+      </div>
+    </fieldset>
+  );
+}
+
+function Stepper({
+  label,
+  display,
+  onMinus,
+  onPlus,
+}: {
+  label: string;
+  display: string;
+  onMinus: () => void;
+  onPlus: () => void;
+}) {
+  return (
+    <div className="flex min-w-0 flex-1 flex-col gap-1 rounded-[12px] bg-surface-muted px-2 py-2">
+      <span className="px-1 text-[12px] text-muted">{label}</span>
+      <div className="flex items-center justify-between">
+        <button
+          type="button"
+          onClick={onMinus}
+          className="size-10 text-[22px] leading-none text-muted"
+          aria-label={`${label}减少`}
+        >
+          −
+        </button>
+        <span className="min-w-[2ch] text-center text-[20px] font-medium tabular-nums">{display}</span>
+        <button
+          type="button"
+          onClick={onPlus}
+          className="size-10 text-[22px] leading-none text-muted"
+          aria-label={`${label}增加`}
+        >
+          +
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function presetLabel(mins: number): string {
+  if (mins < 60) return `${mins}分`;
   const h = Math.floor(mins / 60);
   const m = mins % 60;
-  if (m === 0) return `${h} 小时`;
-  return `${h} 小时 ${m} 分`;
+  if (m === 0) return `${h}小时`;
+  if (m === 30) return `${h}.5小时`;
+  return `${h}小时${m}分`;
 }
