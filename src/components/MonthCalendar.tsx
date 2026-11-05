@@ -5,9 +5,11 @@ import {
   formatEventSpan,
   formatMD,
   isSameDay,
+  FORM_TYPES,
   monthGrid,
   startOfDay,
   TYPE_LABEL,
+  TYPE_SWATCH,
   weekdayLabel,
 } from "../lib/time";
 import type { RecruitEvent } from "../types";
@@ -61,7 +63,7 @@ export function MonthCalendar({
           </button>
         </div>
       </div>
-      <p className="mt-1 text-[13px] text-muted">灰点已完成，蓝点未完成。今天数字为蓝色。</p>
+      <p className="mt-1 text-[13px] text-muted">色点对应测评 / 笔试 / 面试 / 其他。今天数字为蓝色。</p>
 
       <div className="mt-4 grid grid-cols-7 text-center text-[12px] text-muted">
         {["一", "二", "三", "四", "五", "六", "日"].map((d) => (
@@ -74,8 +76,7 @@ export function MonthCalendar({
         {cells.map((date, i) => {
           if (!date) return <div key={`e-${i}`} />;
           const onDay = events.filter((e) => eventTouchesDay(e, date));
-          const done = onDay.filter((e) => eventStatus(e, now) === "done").length;
-          const open = onDay.length - done;
+          const dots = FORM_TYPES.filter((type) => onDay.some((e) => e.type === type));
           const isToday = isSameDay(date, today);
           const isPastDay = date.getTime() < today.getTime();
           const isSelected = isSameDay(date, selected);
@@ -100,8 +101,13 @@ export function MonthCalendar({
                 {date.getDate()}
               </span>
               <span className="mt-0.5 flex h-2 items-center justify-center gap-0.5">
-                {done > 0 ? <span className="size-1 rounded-full bg-muted" /> : null}
-                {open > 0 ? <span className="size-1 rounded-full bg-accent" /> : null}
+                {dots.map((type) => (
+                  <span
+                    key={type}
+                    className="size-1 rounded-full"
+                    style={{ backgroundColor: TYPE_SWATCH[type] }}
+                  />
+                ))}
               </span>
             </button>
           );

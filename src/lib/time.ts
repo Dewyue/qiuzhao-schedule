@@ -17,6 +17,24 @@ export const FORM_TYPES: RecruitEvent["type"][] = [
   "other",
 ];
 
+export const TYPE_CLASS: Record<RecruitEvent["type"], string> = {
+  interview: "bg-accent text-white",
+  exam: "bg-[#1c1c1e] text-white",
+  assessment: "bg-[#4a5d8c] text-white",
+  other: "bg-[#6a5a8f] text-white",
+};
+
+export const TYPE_SWATCH: Record<RecruitEvent["type"], string> = {
+  interview: "#0a4fd8",
+  exam: "#1c1c1e",
+  assessment: "#4a5d8c",
+  other: "#6a5a8f",
+};
+
+/** Visible columns in 本周; extra pages are swipe-only. */
+export const WEEK_PAGE_DAYS = 7;
+export const WEEK_SWIPE_PAGES = 3;
+
 export function eventKind(event: Pick<RecruitEvent, "kind">): RecruitEvent["kind"] {
   return event.kind ?? "slot";
 }
@@ -157,7 +175,8 @@ export function daysForRange(mode: RangeMode, now = new Date()): Date[] {
   const today = startOfDay(now);
   if (mode === "today") return [today];
   if (mode === "tomorrow") return [addDays(today, 1)];
-  return [0, 1, 2, 3, 4, 5, 6].map((i) => addDays(today, i));
+  const total = WEEK_PAGE_DAYS * WEEK_SWIPE_PAGES;
+  return Array.from({ length: total }, (_, i) => addDays(today, i));
 }
 
 export function weekdayLabel(d: Date): string {

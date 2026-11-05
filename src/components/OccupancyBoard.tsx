@@ -15,6 +15,8 @@ import {
   formatDuration,
   occupiesTime,
   occupancyEvents,
+  WEEK_PAGE_DAYS,
+  WEEK_SWIPE_PAGES,
 } from "../lib/time";
 import { DayColumn } from "./DayColumn";
 
@@ -53,15 +55,21 @@ export function OccupancyBoard({
 
   const headerH = mode === "week" ? 44 : 72;
   const gutter = 28;
+  const week = mode === "week";
+  const pages = week
+    ? Array.from({ length: WEEK_SWIPE_PAGES }, (_, page) =>
+        days.slice(page * WEEK_PAGE_DAYS, (page + 1) * WEEK_PAGE_DAYS),
+      )
+    : [days];
 
   return (
-    <div className="relative min-w-0">
+    <div className="flex min-w-0">
       <div
-        className="pointer-events-none absolute top-0 z-[4] flex flex-col"
+        className="pointer-events-none z-[4] shrink-0 bg-surface"
         style={{ width: gutter }}
       >
         <div style={{ height: headerH }} />
-        <div className={mode === "week" ? "mb-3 h-0.5" : "mb-3 h-1"} />
+        <div className={week ? "mb-3 h-0.5" : "mb-3 h-1"} />
         {Array.from({ length: hours + 1 }, (_, i) => (
           <div
             key={i}
@@ -74,35 +82,48 @@ export function OccupancyBoard({
           </div>
         ))}
       </div>
-      <div className={`flex min-w-0 ${mode === "week" ? "gap-1" : "gap-2"}`} style={{ paddingLeft: gutter }}>
-        {days.map((day) => {
-          const occ = occupancyEvents(events);
-          const slices = layoutDayEvents(occ, day);
-          const frees = freeSlotsOnDay(occ, day, startHour, endHour);
-          const pins = axisPins(events).filter((e) => eventTouchesDay(e, day));
-          const pending = events.filter((e) => isAllDay(e) && eventTouchesDay(e, day));
-          return (
-            <DayColumn
-              key={day.toISOString()}
-              day={day}
-              startHour={startHour}
-              endHour={endHour}
-              hourHeight={hourHeight}
-              slices={slices}
-              pins={pins}
-              pending={pending}
-              labeled={labeledFrees(frees, mode)}
-              mode={mode}
-              now={now}
-              selected={day.toDateString() === selectedDay.toDateString()}
-              headerHeight={headerH}
-              onViewEvent={onViewEvent}
-              onShiftEvent={onShiftEvent}
-              onSelectFree={onSelectFree}
-              onPickTime={onPickTime}
-            />
-          );
-        })}
+      <div
+        className={`min-w-0 flex-1 ${
+          week ? "overflow-x-auto snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" : ""
+        }`}
+      >
+        <div className="flex" style={week ? { width: `${WEEK_SWIPE_PAGES * 100}%` } : undefined}>
+          {pages.map((pageDays, page) => (
+            <div
+              key={page}
+              className={`flex min-w-0 ${week ? "w-1/3 shrink-0 snap-start gap-1" : "w-full gap-2"}`}
+            >
+              {pageDays.map((day) => {
+                const occ = occupancyEvents(events);
+                const slices = layoutDayEvents(occ, day);
+                const frees = freeSlotsOnDay(occ, day, startHour, endHour);
+                const pins = axisPins(events).filter((e) => eventTouchesDay(e, day));
+                const pending = events.filter((e) => isAllDay(e) && eventTouchesDay(e, day));
+                return (
+                  <DayColumn
+                    key={day.toISOString()}
+                    day={day}
+                    startHour={startHour}
+                    endHour={endHour}
+                    hourHeight={hourHeight}
+                    slices={slices}
+                    pins={pins}
+                    pending={pending}
+                    labeled={labeledFrees(frees, mode)}
+                    mode={mode}
+                    now={now}
+                    selected={day.toDateString() === selectedDay.toDateString()}
+                    headerHeight={headerH}
+                    onViewEvent={onViewEvent}
+                    onShiftEvent={onShiftEvent}
+                    onSelectFree={onSelectFree}
+                    onPickTime={onPickTime}
+                  />
+                );
+              })}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -137,7 +158,7 @@ export function RangeSummary({
     if (longestDay) longest = Math.max(longest, longestDay.minutes);
   }
   const conflicts = conflictClusterCount(occ, days);
-  const rangeWord = mode === "today" ? "今天" : mode === "tomorrow" ? "明天" : "往后七天";
+  const rangeWord = mode === "today" ? "今天" : mode === "tomorrow" ? "明天" : "往后三周";
 
   return (
     <p className="text-[15px] text-muted">
