@@ -8,6 +8,12 @@ import {
   useRef,
   type ReactNode,
 } from "react";
+import {
+  buildDemoEvents,
+  hasOnboarded,
+  markOnboarded,
+  stripDemoEvents,
+} from "../lib/demo";
 import { idbLoadEvents, idbSaveEvents } from "../lib/idb";
 import { loadEvents, saveEvents } from "../lib/storage";
 import type { RecruitEvent } from "../types";
@@ -29,7 +35,7 @@ function persist(events: RecruitEvent[]): RecruitEvent[] {
 function reducer(state: State, action: Action): State {
   switch (action.type) {
     case "add":
-      return { events: persist([action.event, ...state.events]) };
+      return { events: persist([action.event, ...stripDemoEvents(state.events)]) };
     case "update":
       return {
         events: persist(
@@ -56,9 +62,14 @@ type Ctx = {
 const EventsContext = createContext<Ctx | null>(null);
 
 export function EventsProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(reducer, undefined, () => ({
-    events: loadEvents(),
-  }));
+  const [state, dispatch] = useReducer(reducer, undefined, () => {
+    const existing = loadEvents();
+    if (existing.length > 0) return { events: existing };
+    if (hasOnboarded()) return { events: [] };
+    const demo = buildDemoEvents(new Date());
+    markOnboarded();
+    return { events: persist(demo) };
+  });
   const eventsRef = useRef(state.events);
   eventsRef.current = state.events;
 
@@ -68,11 +79,18 @@ export function EventsProvider({ children }: { children: ReactNode }) {
       const fromIdb = await idbLoadEvents();
       const fromLs = loadEvents();
       if (fromLs.length > 0) {
+        markOnboarded();
         void idbSaveEvents(fromLs);
         return;
       }
       if (fromIdb && fromIdb.length > 0) {
+        markOnboarded();
         dispatch({ type: "replace", events: fromIdb });
+        return;
+      }
+      if (!hasOnboarded()) {
+        markOnboarded();
+        dispatch({ type: "replace", events: buildDemoEvents(new Date()) });
       }
     })();
   }, []);

@@ -2,10 +2,15 @@ import { useMemo, useState } from "react";
 import { BottomNav, type Tab } from "./components/BottomNav";
 import { DataPanel } from "./components/DataPanel";
 import { DayDetailList } from "./components/DayDetailList";
-import { EventDetail } from "./components/EventDialogs";
+import { DemoNotice, EventDetail } from "./components/EventDialogs";
 import { EventForm } from "./components/EventForm";
 import { OccupancyBoard, RangeSummary } from "./components/OccupancyBoard";
 import { RangeSwitch } from "./components/RangeSwitch";
+import {
+  demoNoticeDismissed,
+  dismissDemoNotice,
+  hasDemoEvents,
+} from "./lib/demo";
 import { addDays, DEFAULT_START_HOUR, startOfDay } from "./lib/time";
 import { useEvents } from "./state/EventsContext";
 import type { FreeSlot, RangeMode, RecruitEvent } from "./types";
@@ -19,6 +24,8 @@ export default function App() {
   const [editing, setEditing] = useState<RecruitEvent | null>(null);
   const [draft, setDraft] = useState<Omit<RecruitEvent, "id">>(() => defaultDraft());
   const [viewing, setViewing] = useState<RecruitEvent | null>(null);
+  const showingDemo = hasDemoEvents(events);
+  const [demoOpen, setDemoOpen] = useState(() => !demoNoticeDismissed());
 
   function defaultDraft(start?: Date): Omit<RecruitEvent, "id"> {
     const s = start ?? snapNextHour();
@@ -88,7 +95,12 @@ export default function App() {
         {tab === "schedule" ? (
           <>
             <header className="flex items-center justify-between gap-3">
-              <h1 className="text-[18px] font-semibold tracking-[-0.03em]">秋招日程</h1>
+              <div className="min-w-0">
+                <h1 className="text-[18px] font-semibold tracking-[-0.03em]">秋招日程</h1>
+                {showingDemo ? (
+                  <p className="mt-0.5 text-[12px] text-muted">演示数据 · 记下自己的一场后会清掉</p>
+                ) : null}
+              </div>
               <RangeSwitch
                 value={mode}
                 onChange={(next) => {
@@ -167,6 +179,14 @@ export default function App() {
         ) : null}
       </div>
       <BottomNav value={tab} onChange={setTab} />
+      {showingDemo && demoOpen ? (
+        <DemoNotice
+          onDismiss={() => {
+            dismissDemoNotice();
+            setDemoOpen(false);
+          }}
+        />
+      ) : null}
       {viewing ? (
         <EventDetail
           event={viewing}

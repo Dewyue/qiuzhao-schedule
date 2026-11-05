@@ -80,6 +80,7 @@ function normalizeEvent(item: unknown, index: number): RecruitEvent {
     location: row.location ? String(row.location) : undefined,
     notes: row.notes ? String(row.notes) : undefined,
     kind,
+    demo: row.demo === true ? true : undefined,
   };
 }
 

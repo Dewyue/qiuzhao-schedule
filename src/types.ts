@@ -16,6 +16,8 @@ export type RecruitEvent = {
   location?: string;
   notes?: string;
   kind?: EventKind;
+  /** First-visit sample; cleared when the person records their own event. */
+  demo?: boolean;
 };
 
 export type FreeSlot = {

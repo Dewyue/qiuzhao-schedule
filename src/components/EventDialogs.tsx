@@ -76,3 +76,31 @@ export function EventDetail({
     </div>
   );
 }
+
+export function DemoNotice({ onDismiss }: { onDismiss: () => void }) {
+  return (
+    <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/30 p-4 sm:items-center">
+      <button type="button" className="absolute inset-0" aria-label="关闭" onClick={onDismiss} />
+      <div
+        role="dialog"
+        aria-labelledby="demo-notice-title"
+        className="relative w-full max-w-[400px] rounded-[20px] bg-surface px-5 py-5"
+      >
+        <p className="text-[13px] font-medium text-accent">示例日程</p>
+        <h2 id="demo-notice-title" className="mt-1 text-[22px] font-semibold tracking-[-0.03em]">
+          这些是演示数据
+        </h2>
+        <p className="mt-3 text-[15px] leading-relaxed text-muted">
+          只存在这台设备，方便先看撞车、空闲和不同类型。记下你自己的一场后，演示会全部清掉。
+        </p>
+        <button
+          type="button"
+          onClick={onDismiss}
+          className="mt-5 h-11 w-full rounded-[12px] bg-accent text-[15px] font-medium text-white"
+        >
+          知道了
+        </button>
+      </div>
+    </div>
+  );
+}
