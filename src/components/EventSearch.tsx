@@ -63,7 +63,7 @@ export function EventSearch({
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder="例如 字节、一面、笔试"
-        className="mt-3 h-11 w-full rounded-[12px] bg-surface-muted px-3 text-[15px] outline-none"
+        className="mt-3 h-11 w-full rounded-[12px] bg-surface-muted px-3 text-[16px] outline-none"
       />
       <div className="mt-3 flex gap-2">
         {(

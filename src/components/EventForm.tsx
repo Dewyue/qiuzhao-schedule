@@ -6,8 +6,9 @@ import type { EventKind, EventType, RecruitEvent } from "../types";
 const ROUNDS = ["一面", "二面", "终面"] as const;
 const DURATION_MINUTES = Array.from({ length: 24 }, (_, i) => (i + 1) * 10);
 const DEFAULT_DDL_MINUTES = 30;
+// ≥16px so iOS Safari does not auto-zoom on focus.
 const FIELD =
-  "h-11 rounded-[12px] bg-surface-muted px-3 text-[15px] outline-none";
+  "h-11 rounded-[12px] bg-surface-muted px-3 text-[16px] outline-none";
 
 type Draft = Omit<RecruitEvent, "id">;
 
@@ -447,7 +448,7 @@ export function EventForm({
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           placeholder={type === "other" ? "" : "可选"}
-          className="h-9 rounded-[12px] bg-surface-muted px-3 text-[14px] outline-none"
+          className="h-11 rounded-[12px] bg-surface-muted px-3 text-[16px] outline-none"
         />
       </label>
 
