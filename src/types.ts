@@ -1,4 +1,4 @@
-export type EventType = "assessment" | "exam" | "interview" | "other";
+export type EventType = "assessment" | "exam" | "interview" | "fun" | "other";
 
 export type EventKind = "slot" | "deadline" | "allday" | "open";
 

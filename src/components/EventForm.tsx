@@ -1,6 +1,6 @@
 import type { FormEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
-import { FORM_TYPES, TYPE_LABEL, toDatetimeLocal } from "../lib/time";
+import { FORM_TYPES, TYPE_LABEL, isLooseType, toDatetimeLocal } from "../lib/time";
 import type { EventKind, EventType, RecruitEvent } from "../types";
 
 const ROUNDS = ["一面", "二面", "终面"] as const;
@@ -63,7 +63,8 @@ export function EventForm({
   }, [duration]);
 
   const timedSlot =
-    kind === "slot" && (type === "exam" || type === "assessment" || type === "interview");
+    kind === "slot" &&
+    (type === "exam" || type === "assessment" || type === "interview" || isLooseType(type));
   const timedDeadline =
     kind === "deadline" &&
     (type === "assessment" || type === "exam" || type === "interview");
@@ -101,7 +102,7 @@ export function EventForm({
       }
       return;
     }
-    if (type === "interview" && kind === "slot") {
+    if ((type === "interview" || isLooseType(type)) && kind === "slot") {
       applyDurationForward(duration || 60, value);
       return;
     }
@@ -174,15 +175,14 @@ export function EventForm({
       return;
     }
     if (!(endDate.getTime() > startDate.getTime())) return;
-    const showLocation = type === "interview" || type === "other";
-    const freeTitle =
-      type === "other"
-        ? title.trim()
-        : type === "interview" && kind === "slot"
-          ? title
-          : kind === "deadline"
-            ? "截止"
-            : "";
+    const showLocation = type === "interview" || isLooseType(type);
+    const freeTitle = isLooseType(type)
+      ? title.trim()
+      : type === "interview" && kind === "slot"
+        ? title
+        : kind === "deadline"
+          ? "截止"
+          : "";
     onSave({
       company: company.trim(),
       type,
@@ -206,12 +206,12 @@ export function EventForm({
       </div>
 
       <label className="flex flex-col gap-1">
-        <span className="text-[13px] text-muted">{type === "other" ? "名称" : "公司"}</span>
+        <span className="text-[13px] text-muted">{isLooseType(type) ? "名称" : "公司"}</span>
         <input
           required
           value={company}
           onChange={(e) => setCompany(e.target.value)}
-          placeholder={type === "other" ? "" : "公司名称"}
+          placeholder={isLooseType(type) ? "" : "公司名称"}
           className={FIELD}
         />
       </label>
@@ -223,12 +223,12 @@ export function EventForm({
           onChange={(e) => {
             const next = e.target.value as EventType;
             setType(next);
-            if (next !== "interview" && next !== "other") setTitle("");
-            if (next !== "interview" && next !== "other") setLocation("");
+            if (next !== "interview" && !isLooseType(next)) setTitle("");
+            if (next !== "interview" && !isLooseType(next)) setLocation("");
             const allowed = kindModes(next).map((m) => m.id);
             const nextKind = allowed.includes(kind) ? kind : "slot";
             setKind(nextKind);
-            if (next === "interview" && nextKind === "slot") {
+            if ((next === "interview" || isLooseType(next)) && nextKind === "slot") {
               applyDurationForward(duration || 60, start);
             }
             if (
@@ -311,7 +311,7 @@ export function EventForm({
         </fieldset>
       ) : null}
 
-      {type === "other" ? (
+      {isLooseType(type) ? (
         <label className="flex flex-col gap-1">
           <span className="text-[13px] text-muted">说明</span>
           <input value={title} onChange={(e) => setTitle(e.target.value)} className={FIELD} />
@@ -417,26 +417,13 @@ export function EventForm({
         </>
       ) : null}
 
-      {type === "other" ? (
-        <label className="flex flex-col gap-1">
-          <span className="text-[13px] text-muted">结束</span>
-          <input
-            type="datetime-local"
-            required
-            value={end}
-            onChange={(e) => setEnd(e.target.value)}
-            className={FIELD}
-          />
-        </label>
-      ) : null}
-
-      {type === "interview" || type === "other" ? (
+      {type === "interview" || isLooseType(type) ? (
         <label className="flex flex-col gap-1">
           <span className="text-[13px] text-muted">地点</span>
           <input
             value={location}
             onChange={(e) => setLocation(e.target.value)}
-            placeholder={type === "other" ? "" : "线下面试 / 公司"}
+            placeholder={isLooseType(type) ? "" : "线下面试 / 公司"}
             className={FIELD}
           />
         </label>
@@ -447,7 +434,7 @@ export function EventForm({
         <input
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder={type === "other" ? "" : "可选"}
+          placeholder={isLooseType(type) ? "" : "可选"}
           className="h-11 rounded-[12px] bg-surface-muted px-3 text-[16px] outline-none"
         />
       </label>
@@ -515,7 +502,12 @@ function initialFields(source: Draft): {
     return { start: "", end: "", deadline: "", duration: DEFAULT_DDL_MINUTES };
   }
 
-  if (source.type === "interview" && kind === "slot" && mins < 10 && source.start) {
+  if (
+    (source.type === "interview" || isLooseType(source.type)) &&
+    kind === "slot" &&
+    mins < 10 &&
+    source.start
+  ) {
     return {
       start: startLocal,
       duration: 60,

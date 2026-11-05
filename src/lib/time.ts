@@ -7,6 +7,7 @@ export const TYPE_LABEL: Record<RecruitEvent["type"], string> = {
   assessment: "测评",
   exam: "笔试",
   interview: "面试",
+  fun: "娱乐",
   other: "其他",
 };
 
@@ -14,6 +15,7 @@ export const FORM_TYPES: RecruitEvent["type"][] = [
   "assessment",
   "exam",
   "interview",
+  "fun",
   "other",
 ];
 
@@ -21,6 +23,7 @@ export const TYPE_CLASS: Record<RecruitEvent["type"], string> = {
   interview: "bg-accent text-white",
   exam: "bg-[#1c1c1e] text-white",
   assessment: "bg-[#4a5d8c] text-white",
+  fun: "bg-[#97c890] text-[#1d1d1f]",
   other: "bg-[#6a5a8f] text-white",
 };
 
@@ -28,8 +31,13 @@ export const TYPE_SWATCH: Record<RecruitEvent["type"], string> = {
   interview: "#0a4fd8",
   exam: "#1c1c1e",
   assessment: "#4a5d8c",
+  fun: "#97c890",
   other: "#6a5a8f",
 };
+
+export function isLooseType(type: RecruitEvent["type"]): boolean {
+  return type === "fun" || type === "other";
+}
 
 /** Visible columns in 本周; extra pages are swipe-only. */
 export const WEEK_PAGE_DAYS = 7;

@@ -423,7 +423,7 @@ function AxisPin({
       type="button"
       data-block
       {...bind}
-      className={`absolute flex items-center gap-1.5 rounded-[10px] px-2 py-0.5 text-left text-white select-none ${TYPE_CLASS[event.type]} ${live ? "z-[6] shadow-lg" : "z-[3]"}`}
+      className={`absolute flex items-center gap-1.5 rounded-[10px] px-2 py-0.5 text-left select-none ${TYPE_CLASS[event.type]} ${live ? "z-[6] shadow-lg" : "z-[3]"}`}
       style={{
         top: Math.max(4, top - 11),
         left: 6,

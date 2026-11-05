@@ -2,7 +2,7 @@ import type { EventType, RecruitEvent } from "../types";
 
 const KEY = "qiuzhao-schedule:events:v1";
 
-const TYPES: EventType[] = ["assessment", "exam", "interview", "other"];
+const TYPES: EventType[] = ["assessment", "exam", "interview", "fun", "other"];
 
 export type ExportPayload = {
   app: "qiuzhao-schedule";
