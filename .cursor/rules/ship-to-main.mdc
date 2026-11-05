@@ -10,3 +10,4 @@ After finishing a user-requested change in this project, commit and push to `mai
 - Remote is SSH: `git@github.com:Dewyue/qiuzhao-schedule.git`
 - Pushing `main` triggers GitHub Actions: sync `dist` to Aliyun (`qiuzhao.dewyue.com`) and mirror to GitHub Pages
 - Keep the usual commit message quality; do not force-push
+- After any user-facing product change, update `README.md` in the same commit so it matches the live app (types, fields, gestures, deploy, colors)

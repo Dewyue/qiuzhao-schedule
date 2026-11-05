@@ -5,7 +5,7 @@ import type { EventKind, EventType, RecruitEvent } from "../types";
 
 const ROUNDS = ["一面", "二面", "终面"] as const;
 const DEFAULT_DDL_MINUTES = 30;
-const DURATION_PRESETS = [30, 45, 60, 90, 120, 180];
+const DURATION_PRESETS = [30, 60, 90, 120, 180];
 const DURATION_MAX = 16 * 60;
 const DURATION_MIN = 15;
 const DURATION_STEP = 15;
