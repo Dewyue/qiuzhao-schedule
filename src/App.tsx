@@ -6,7 +6,7 @@ import { EventDetail } from "./components/EventDialogs";
 import { EventForm } from "./components/EventForm";
 import { OccupancyBoard, RangeSummary } from "./components/OccupancyBoard";
 import { RangeSwitch } from "./components/RangeSwitch";
-import { addDays, startOfDay } from "./lib/time";
+import { addDays, DEFAULT_START_HOUR, startOfDay } from "./lib/time";
 import { useEvents } from "./state/EventsContext";
 import type { FreeSlot, RangeMode, RecruitEvent } from "./types";
 
@@ -100,6 +100,16 @@ export default function App() {
               />
             </header>
             <RangeSummary events={events} mode={mode} now={now} />
+            {mode === "today" || mode === "tomorrow" ? (
+              <div>
+                <p className="mb-2 text-[13px] font-medium text-muted">当日列表</p>
+                <DayDetailList
+                  events={events}
+                  day={selectedDay}
+                  onView={onViewEvent}
+                />
+              </div>
+            ) : null}
             <OccupancyBoard
               events={events}
               mode={mode}
@@ -110,16 +120,6 @@ export default function App() {
               onSelectFree={onSelectFree}
               onPickTime={onPickTime}
             />
-            {mode === "today" || mode === "tomorrow" ? (
-              <div className="mt-2">
-                <p className="mb-2 text-[13px] font-medium text-muted">当日列表</p>
-                <DayDetailList
-                  events={events}
-                  day={selectedDay}
-                  onView={onViewEvent}
-                />
-              </div>
-            ) : null}
           </>
         ) : null}
 
@@ -186,6 +186,6 @@ function snapNextHour(): Date {
   const d = new Date();
   d.setMinutes(0, 0, 0);
   d.setHours(d.getHours() + 1);
-  if (d.getHours() < 6) d.setHours(6);
+  if (d.getHours() < DEFAULT_START_HOUR) d.setHours(DEFAULT_START_HOUR);
   return d;
 }
