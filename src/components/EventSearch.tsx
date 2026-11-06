@@ -35,6 +35,8 @@ export function EventSearch({
           e.kind === "allday" ? "时间待定 当天" : "",
           e.type === "other" ? "其他" : "",
           e.type === "fun" ? "娱乐" : "",
+          e.type === "meeting" ? "会议" : "",
+          e.type === "school" ? "学校" : "",
         ]
           .join(" ")
           .toLowerCase();

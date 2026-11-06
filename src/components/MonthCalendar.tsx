@@ -63,7 +63,9 @@ export function MonthCalendar({
           </button>
         </div>
       </div>
-      <p className="mt-1 text-[13px] text-muted">色点对应测评 / 笔试 / 面试 / 娱乐 / 其他。今天数字为蓝色。</p>
+      <p className="mt-1 text-[13px] text-muted">
+        色点对应测评 / 笔试 / 面试 / 娱乐 / 会议 / 学校 / 其他。今天数字为蓝色。
+      </p>
 
       <div className="mt-4 grid grid-cols-7 text-center text-[12px] text-muted">
         {["一", "二", "三", "四", "五", "六", "日"].map((d) => (

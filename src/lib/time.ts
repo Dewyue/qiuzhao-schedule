@@ -8,6 +8,8 @@ export const TYPE_LABEL: Record<RecruitEvent["type"], string> = {
   exam: "笔试",
   interview: "面试",
   fun: "娱乐",
+  meeting: "会议",
+  school: "学校",
   other: "其他",
 };
 
@@ -16,6 +18,8 @@ export const FORM_TYPES: RecruitEvent["type"][] = [
   "exam",
   "interview",
   "fun",
+  "meeting",
+  "school",
   "other",
 ];
 
@@ -23,20 +27,40 @@ export const TYPE_CLASS: Record<RecruitEvent["type"], string> = {
   interview: "bg-accent text-white",
   exam: "bg-[#1c1c1e] text-white",
   assessment: "bg-[#4a5d8c] text-white",
-  fun: "bg-[#97c890] text-[#1d1d1f]",
-  other: "bg-[#6a5a8f] text-white",
+  fun: "bg-[#98cb3e] text-[#1d1d1f]",
+  meeting: "bg-[#954635] text-white",
+  school: "bg-[#6a5a8f] text-white",
+  other: "bg-[#a49f99] text-[#1d1d1f]",
 };
 
 export const TYPE_SWATCH: Record<RecruitEvent["type"], string> = {
   interview: "#0a4fd8",
   exam: "#1c1c1e",
   assessment: "#4a5d8c",
-  fun: "#97c890",
-  other: "#6a5a8f",
+  fun: "#98cb3e",
+  meeting: "#954635",
+  school: "#6a5a8f",
+  other: "#a49f99",
 };
 
+/** 娱乐 / 其他：名称 + 说明 + 地点。 */
 export function isLooseType(type: RecruitEvent["type"]): boolean {
   return type === "fun" || type === "other";
+}
+
+/** 会议 / 学校：只有名称、开始、时长、结束、备注。 */
+export function isSimpleNamedType(type: RecruitEvent["type"]): boolean {
+  return type === "meeting" || type === "school";
+}
+
+/** 用「名称」而不是「公司」。 */
+export function usesNameField(type: RecruitEvent["type"]): boolean {
+  return isLooseType(type) || isSimpleNamedType(type);
+}
+
+/** 按时段占格、可用时长控件（不含招聘类截止模式）。 */
+export function isNamedSlotType(type: RecruitEvent["type"]): boolean {
+  return isLooseType(type) || isSimpleNamedType(type);
 }
 
 /** Visible columns in 本周; extra pages are swipe-only. */

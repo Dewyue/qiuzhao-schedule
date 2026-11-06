@@ -1,6 +1,14 @@
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
-import { FORM_TYPES, TYPE_LABEL, isLooseType, toDatetimeLocal } from "../lib/time";
+import {
+  FORM_TYPES,
+  TYPE_LABEL,
+  isLooseType,
+  isNamedSlotType,
+  isSimpleNamedType,
+  toDatetimeLocal,
+  usesNameField,
+} from "../lib/time";
 import type { EventKind, EventType, RecruitEvent } from "../types";
 
 const ROUNDS = ["一面", "二面", "终面"] as const;
@@ -60,11 +68,15 @@ export function EventForm({
 
   const timedSlot =
     kind === "slot" &&
-    (type === "exam" || type === "assessment" || type === "interview" || isLooseType(type));
+    (type === "exam" ||
+      type === "assessment" ||
+      type === "interview" ||
+      isNamedSlotType(type));
   const timedDeadline =
     kind === "deadline" &&
     (type === "assessment" || type === "exam" || type === "interview");
   const modes = kindModes(type);
+  const named = usesNameField(type);
 
   function applyDurationForward(mins: number, startLocal: string) {
     setDuration(mins);
@@ -98,7 +110,7 @@ export function EventForm({
       }
       return;
     }
-    if ((type === "interview" || isLooseType(type)) && kind === "slot") {
+    if ((type === "interview" || isNamedSlotType(type)) && kind === "slot") {
       applyDurationForward(duration || 60, value);
       return;
     }
@@ -182,13 +194,13 @@ export function EventForm({
     onSave({
       company: company.trim(),
       type,
-      title: freeTitle,
+      title: isSimpleNamedType(type) ? "" : freeTitle,
       start: startDate.toISOString(),
       end: endDate.toISOString(),
       deadline: kind === "deadline" ? startDate.toISOString() : undefined,
       location: showLocation ? location.trim() || undefined : undefined,
       notes: notes.trim() || undefined,
-      kind,
+      kind: isSimpleNamedType(type) ? "slot" : kind,
     });
   }
 
@@ -202,12 +214,12 @@ export function EventForm({
       </div>
 
       <label className="flex flex-col gap-1">
-        <span className="text-[13px] text-muted">{isLooseType(type) ? "名称" : "公司"}</span>
+        <span className="text-[13px] text-muted">{named ? "名称" : "公司"}</span>
         <input
           required
           value={company}
           onChange={(e) => setCompany(e.target.value)}
-          placeholder={isLooseType(type) ? "" : "公司名称"}
+          placeholder={named ? "" : "公司名称"}
           className={FIELD}
         />
       </label>
@@ -222,9 +234,13 @@ export function EventForm({
             if (next !== "interview" && !isLooseType(next)) setTitle("");
             if (next !== "interview" && !isLooseType(next)) setLocation("");
             const allowed = kindModes(next).map((m) => m.id);
-            const nextKind = allowed.includes(kind) ? kind : "slot";
+            const nextKind = isSimpleNamedType(next)
+              ? "slot"
+              : allowed.includes(kind)
+                ? kind
+                : "slot";
             setKind(nextKind);
-            if ((next === "interview" || isLooseType(next)) && nextKind === "slot") {
+            if ((next === "interview" || isNamedSlotType(next)) && nextKind === "slot") {
               applyDurationForward(duration || 60, start);
             }
             if (
@@ -411,7 +427,7 @@ export function EventForm({
         <input
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder={isLooseType(type) ? "" : "可选"}
+          placeholder={named ? "" : "可选"}
           className="h-11 rounded-[12px] bg-surface-muted px-3 text-[16px] outline-none"
         />
       </label>
@@ -480,7 +496,7 @@ function initialFields(source: Draft): {
   }
 
   if (
-    (source.type === "interview" || isLooseType(source.type)) &&
+    (source.type === "interview" || isNamedSlotType(source.type)) &&
     kind === "slot" &&
     mins < 10 &&
     source.start
@@ -522,6 +538,7 @@ function kindModes(type: EventType): { id: EventKind; label: string }[] {
       { id: "deadline", label: "截止前" },
     ];
   }
+  // fun / meeting / school / other：固定按时段记，无「怎么记」切换
   return [];
 }
 
