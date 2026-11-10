@@ -177,7 +177,6 @@ export function useBlockDrag(
 
   function onPointerDown(e: ReactPointerEvent) {
     if (e.pointerType === "mouse" && e.button !== 0) return;
-    e.stopPropagation();
 
     const s = drag.current;
     s.unbind?.();
@@ -200,9 +199,14 @@ export function useBlockDrag(
       if (ev.pointerId !== pointerId) return;
 
       if (!s.active) {
-        const slipped =
-          Math.abs(ev.clientY - s.y) > SLIP_PX || Math.abs(ev.clientX - s.x) > SLIP_PX;
-        if (slipped) abortPending();
+        const dx = ev.clientX - s.x;
+        const dy = ev.clientY - s.y;
+        // Horizontal swipe changes 今天/明天/本周; don't arm a time drag.
+        if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) {
+          abortPending();
+          return;
+        }
+        if (Math.abs(dy) > SLIP_PX || Math.abs(dx) > SLIP_PX) abortPending();
         return;
       }
 

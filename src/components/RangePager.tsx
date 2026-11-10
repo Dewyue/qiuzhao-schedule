@@ -65,6 +65,8 @@ export function RangePager({
     let suppressClick = false;
     let origin: HTMLElement | null = null;
     let fromTouch = false;
+    let startScroll = 0;
+    let panningWeek = false;
 
     function weekScroller(from: EventTarget | null): HTMLElement | null {
       const el = from instanceof Element ? from.closest("[data-week-scroll]") : null;
@@ -87,9 +89,9 @@ export function RangePager({
 
     function onDown(e: PointerEvent) {
       if (e.pointerType === "mouse" && e.button !== 0) return;
-      if ((e.target as Element | null)?.closest?.("[data-block]")) return;
       tracking = true;
       claimed = false;
+      panningWeek = false;
       axis = null;
       fromTouch = e.pointerType !== "mouse";
       pointerId = e.pointerId;
@@ -98,6 +100,7 @@ export function RangePager({
       lastT = e.timeStamp;
       velocity = 0;
       origin = e.target instanceof HTMLElement ? e.target : null;
+      startScroll = weekScroller(origin)?.scrollLeft ?? 0;
     }
 
     function follow(clientX: number, clientY: number, timeStamp: number) {
@@ -116,21 +119,28 @@ export function RangePager({
           tracking = false;
           return;
         }
-        const scroller = weekScroller(origin);
-        if (scroller && weekCanScroll(scroller, dx)) {
-          tracking = false;
-          return;
-        }
-        claimed = true;
       }
-      if (!claimed) return;
+      const scroller = weekScroller(origin);
+      if (
+        !claimed &&
+        modeRef.current === "week" &&
+        scroller &&
+        weekCanScroll(scroller, dx)
+      ) {
+        const max = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
+        scroller.scrollLeft = Math.max(0, Math.min(max, startScroll - dx));
+        panningWeek = true;
+        return;
+      }
+      claimed = true;
+      panningWeek = false;
       place(resist(dx), false);
     }
 
     function onMove(e: PointerEvent) {
       if (fromTouch || !tracking || e.pointerId !== pointerId) return;
       follow(e.clientX, e.clientY, e.timeStamp);
-      if (claimed && e.cancelable) e.preventDefault();
+      if ((claimed || panningWeek) && e.cancelable) e.preventDefault();
     }
 
     function finish(e: PointerEvent) {
@@ -138,9 +148,18 @@ export function RangePager({
       if (e.pointerId !== pointerId) return;
       const dx = e.clientX - startX;
       const was = claimed;
+      const wasWeek = panningWeek;
       tracking = false;
       claimed = false;
+      panningWeek = false;
       pointerId = -1;
+      if (wasWeek && !was) {
+        suppressClick = true;
+        window.setTimeout(() => {
+          suppressClick = false;
+        }, 380);
+        return;
+      }
       if (!was || axis !== "h") {
         place(0, false);
         return;
@@ -171,17 +190,17 @@ export function RangePager({
       const t = e.touches[0];
       if (!t) return;
       follow(t.clientX, t.clientY, e.timeStamp);
-      if (claimed && e.cancelable) e.preventDefault();
+      if ((claimed || panningWeek) && e.cancelable) e.preventDefault();
     }
 
-    view.addEventListener("pointerdown", onDown);
+    view.addEventListener("pointerdown", onDown, true);
     view.addEventListener("click", onClickCapture, true);
     view.addEventListener("touchmove", onTouchMove, { passive: false });
     window.addEventListener("pointermove", onMove, { passive: false });
     window.addEventListener("pointerup", finish);
     window.addEventListener("pointercancel", finish);
     return () => {
-      view.removeEventListener("pointerdown", onDown);
+      view.removeEventListener("pointerdown", onDown, true);
       view.removeEventListener("click", onClickCapture, true);
       view.removeEventListener("touchmove", onTouchMove);
       window.removeEventListener("pointermove", onMove);
@@ -191,7 +210,7 @@ export function RangePager({
   }, []);
 
   return (
-    <div ref={viewportRef} className="overflow-hidden">
+    <div ref={viewportRef} className="overflow-hidden touch-pan-y">
       <div ref={trackRef} className="flex w-[300%]" style={{ willChange: "transform" }}>
         {ORDER.map((page) => (
           <div key={page} className="w-1/3 shrink-0">
