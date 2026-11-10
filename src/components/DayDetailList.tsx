@@ -1,5 +1,5 @@
 import type { RecruitEvent } from "../types";
-import { formatEventSpan, isSameDay, TYPE_LABEL } from "../lib/time";
+import { formatEventSpan, isSameDay, TYPE_LABEL, TYPE_SWATCH } from "../lib/time";
 
 export function DayDetailList({
   events,
@@ -47,9 +47,14 @@ function ListRow({
     <button
       type="button"
       onClick={onView}
-      className="flex w-full items-start justify-between gap-3 rounded-[18px] bg-surface-muted px-4 py-3 text-left hover:bg-[#ececf0]"
+      className="flex w-full items-start gap-3 rounded-[18px] bg-surface-muted px-3 py-3 text-left hover:bg-[#ececf0]"
     >
-      <div className="min-w-0">
+      <span
+        aria-hidden
+        className="mt-1 h-9 w-1.5 shrink-0 rounded-full"
+        style={{ backgroundColor: TYPE_SWATCH[event.type] }}
+      />
+      <div className="min-w-0 flex-1">
         <p className="truncate text-[15px] font-semibold tracking-[-0.02em]">{event.company}</p>
         <p className="mt-0.5 text-[13px] text-muted">
           {TYPE_LABEL[event.type]}

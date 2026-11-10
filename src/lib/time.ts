@@ -23,16 +23,7 @@ export const FORM_TYPES: RecruitEvent["type"][] = [
   "other",
 ];
 
-export const TYPE_CLASS: Record<RecruitEvent["type"], string> = {
-  interview: "bg-accent text-white",
-  exam: "bg-[#1c1c1e] text-white",
-  assessment: "bg-[#4a5d8c] text-white",
-  fun: "bg-[#98cb3e] text-[#1d1d1f]",
-  meeting: "bg-[#954635] text-white",
-  school: "bg-[#6a5a8f] text-white",
-  other: "bg-[#a49f99] text-[#1d1d1f]",
-};
-
+/** Fill color for occupancy blocks / month dots. Applied as inline style so it never depends on Tailwind scanning. */
 export const TYPE_SWATCH: Record<RecruitEvent["type"], string> = {
   interview: "#0a4fd8",
   exam: "#1c1c1e",
@@ -42,6 +33,27 @@ export const TYPE_SWATCH: Record<RecruitEvent["type"], string> = {
   school: "#6a5a8f",
   other: "#a49f99",
 };
+
+/** Text on top of TYPE_SWATCH. */
+export const TYPE_INK: Record<RecruitEvent["type"], string> = {
+  interview: "#ffffff",
+  exam: "#ffffff",
+  assessment: "#ffffff",
+  fun: "#1d1d1f",
+  meeting: "#ffffff",
+  school: "#ffffff",
+  other: "#1d1d1f",
+};
+
+export function typeBlockStyle(type: RecruitEvent["type"]): {
+  backgroundColor: string;
+  color: string;
+} {
+  return {
+    backgroundColor: TYPE_SWATCH[type] ?? TYPE_SWATCH.other,
+    color: TYPE_INK[type] ?? TYPE_INK.other,
+  };
+}
 
 /** 娱乐 / 其他：名称 + 说明 + 地点。 */
 export function isLooseType(type: RecruitEvent["type"]): boolean {

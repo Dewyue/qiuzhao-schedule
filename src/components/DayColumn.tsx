@@ -10,8 +10,8 @@ import {
   mergeBusy,
   dragOffsetPx,
   shiftEvent,
-  TYPE_CLASS,
   TYPE_LABEL,
+  typeBlockStyle,
   weekdayLabel,
   weekdayShort,
 } from "../lib/time";
@@ -293,6 +293,7 @@ function EventChip({
   );
   const moved = shiftEvent(slice.event, previewMin, day);
   const timeLabel = `${formatHM(new Date(moved.start))}–${formatHM(new Date(moved.end))}`;
+  const paint = typeBlockStyle(slice.event.type);
   if (compact) {
     return (
       <button
@@ -300,10 +301,11 @@ function EventChip({
         data-block
         aria-label={`${slice.event.company} ${TYPE_LABEL[slice.event.type]} ${timeLabel}`}
         {...bind}
-        className={`absolute select-none rounded-[5px] ${TYPE_CLASS[slice.event.type]} ${
+        className={`absolute select-none rounded-[5px] ${
           slice.conflicted ? "ring-1 ring-danger" : ""
         } ${live ? "z-[6] shadow-lg" : "z-[2]"}`}
         style={{
+          ...paint,
           top: top + 1,
           height: Math.max(8, height - 2),
           left: `calc(${slice.lane * widthPct}% + 2px)`,
@@ -318,16 +320,17 @@ function EventChip({
       type="button"
       data-block
       {...bind}
-        className={`absolute overflow-hidden rounded-[12px] px-2 py-1 text-left select-none ${TYPE_CLASS[slice.event.type]} ${
+      className={`absolute overflow-hidden rounded-[12px] px-2 py-1 text-left select-none ${
         slice.conflicted ? "ring-2 ring-danger ring-offset-1 ring-offset-surface-muted" : ""
       } ${live ? "z-[6] shadow-lg" : "z-[2]"}`}
-        style={{
-          top: top + 2,
-          height: height - 4,
-          left: `calc(${slice.lane * widthPct}% + 6px)`,
-          width: `calc(${widthPct}% - 10px)`,
-          willChange: live ? "transform" : undefined,
-        }}
+      style={{
+        ...paint,
+        top: top + 2,
+        height: height - 4,
+        left: `calc(${slice.lane * widthPct}% + 6px)`,
+        width: `calc(${widthPct}% - 10px)`,
+        willChange: live ? "transform" : undefined,
+      }}
     >
       <p className={`truncate font-semibold ${dense ? "text-[12px]" : "text-[13px]"}`}>
         {slice.event.company}
@@ -400,6 +403,7 @@ function AxisPin({
     : event.type === "exam"
       ? `开考 ${hm} · ${event.company}`
       : `开始 ${hm} · ${event.company}`;
+  const paint = typeBlockStyle(event.type);
   if (compact) {
     return (
       <button
@@ -407,8 +411,9 @@ function AxisPin({
         data-block
         aria-label={label}
         {...bind}
-        className={`absolute select-none rounded-[3px] ${TYPE_CLASS[event.type]} ${live ? "z-[6] shadow-lg" : "z-[3]"}`}
+        className={`absolute select-none rounded-[3px] ${live ? "z-[6] shadow-lg" : "z-[3]"}`}
         style={{
+          ...paint,
           top: Math.max(2, top - 3),
           height: 6,
           left: 2,
@@ -423,8 +428,9 @@ function AxisPin({
       type="button"
       data-block
       {...bind}
-      className={`absolute flex items-center gap-1.5 rounded-[10px] px-2 py-0.5 text-left select-none ${TYPE_CLASS[event.type]} ${live ? "z-[6] shadow-lg" : "z-[3]"}`}
+      className={`absolute flex items-center gap-1.5 rounded-[10px] px-2 py-0.5 text-left select-none ${live ? "z-[6] shadow-lg" : "z-[3]"}`}
       style={{
+        ...paint,
         top: Math.max(4, top - 11),
         left: 6,
         right: 6,
