@@ -1,18 +1,24 @@
 import type { MouseEvent, PointerEvent as ReactPointerEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 
-const HOLD_MS = 200;
+/** True long-press; short enough to feel responsive, long enough to avoid scroll slips. */
+const HOLD_MS = 480;
+/** Finger slip before arming cancels the hold so the page can scroll. */
+const SLIP_PX = 12;
 
 export function useBlockDrag(
   pxPerMinute: number,
   onTap: () => void,
   onCommit: (deltaMin: number) => void,
   clampPx: (dy: number) => number = (dy) => dy,
+  /** Snap raw minute delta (e.g. to 10-minute grid). */
+  snapMins: (rawMin: number) => number = (m) => m,
 ) {
   const [live, setLive] = useState(false);
   const [previewMin, setPreviewMin] = useState(0);
   const drag = useRef({
     id: -1,
+    x: 0,
     y: 0,
     timer: 0,
     active: false,
@@ -25,6 +31,8 @@ export function useBlockDrag(
   });
   const clampRef = useRef(clampPx);
   clampRef.current = clampPx;
+  const snapRef = useRef(snapMins);
+  snapRef.current = snapMins;
   const commitRef = useRef(onCommit);
   commitRef.current = onCommit;
   const pxRef = useRef(pxPerMinute);
@@ -76,6 +84,24 @@ export function useBlockDrag(
     target.style.transform = px ? `translate3d(0, ${px}px, 0)` : "";
   }
 
+  function bounce(target: HTMLElement) {
+    try {
+      target.animate(
+        [
+          { transform: "translate3d(0, 0, 0) scale(1)" },
+          { transform: "translate3d(0, 0, 0) scale(1.06)" },
+          { transform: "translate3d(0, 0, 0) scale(1)" },
+        ],
+        { duration: 340, easing: "cubic-bezier(0.34, 1.45, 0.64, 1)" },
+      );
+    } catch {
+      /* WAAPI unavailable */
+    }
+    if (typeof navigator !== "undefined" && navigator.vibrate) {
+      navigator.vibrate([14, 28, 18]);
+    }
+  }
+
   function activate() {
     const s = drag.current;
     if (s.active || !s.target) return;
@@ -83,7 +109,32 @@ export function useBlockDrag(
     setLive(true);
     setPreviewMin(0);
     paint(s.target, 0);
-    if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(10);
+    bounce(s.target);
+  }
+
+  function abortPending() {
+    const s = drag.current;
+    window.clearTimeout(s.timer);
+    s.timer = 0;
+    s.unbind?.();
+    s.unbind = null;
+    const target = s.target;
+    const pointerId = s.id;
+    s.active = false;
+    s.id = -1;
+    s.target = null;
+    s.mins = 0;
+    s.px = 0;
+    s.shown = 0;
+    if (target && pointerId >= 0) {
+      target.style.removeProperty("transition");
+      target.style.transform = "";
+      try {
+        target.releasePointerCapture(pointerId);
+      } catch {
+        /* not capturing */
+      }
+    }
   }
 
   function finish(pointerId: number) {
@@ -134,6 +185,7 @@ export function useBlockDrag(
 
     s.suppress = false;
     s.id = e.pointerId;
+    s.x = e.clientX;
     s.y = e.clientY;
     s.active = false;
     s.mins = 0;
@@ -144,25 +196,27 @@ export function useBlockDrag(
     const pointerId = e.pointerId;
     s.target = target;
 
-    try {
-      target.setPointerCapture(pointerId);
-    } catch {
-      /* already released */
-    }
-
     function onMove(ev: PointerEvent) {
       if (ev.pointerId !== pointerId) return;
-      // Own the gesture for the whole press so the page cannot scroll.
+
+      if (!s.active) {
+        const slipped =
+          Math.abs(ev.clientY - s.y) > SLIP_PX || Math.abs(ev.clientX - s.x) > SLIP_PX;
+        if (slipped) abortPending();
+        return;
+      }
+
       ev.preventDefault();
-      if (!s.active) return;
       const px = clampRef.current(ev.clientY - s.y);
       s.px = px;
       const ppm = pxRef.current;
-      s.mins = ppm > 0 ? Math.round(px / ppm) : 0;
-      paint(target, px);
-      if (s.mins !== s.shown) {
-        s.shown = s.mins;
-        setPreviewMin(s.mins);
+      const raw = ppm > 0 ? Math.round(px / ppm) : 0;
+      const mins = snapRef.current(raw);
+      s.mins = mins;
+      paint(target, mins * ppm);
+      if (mins !== s.shown) {
+        s.shown = mins;
+        setPreviewMin(mins);
       }
     }
 
@@ -181,7 +235,12 @@ export function useBlockDrag(
     };
 
     s.timer = window.setTimeout(() => {
-      if (s.id !== pointerId) return;
+      if (s.id !== pointerId || !s.target) return;
+      try {
+        s.target.setPointerCapture(pointerId);
+      } catch {
+        /* already released */
+      }
       activate();
     }, HOLD_MS);
   }

@@ -10,6 +10,8 @@ import {
   mergeBusy,
   dragOffsetPx,
   shiftEvent,
+  snapDeltaMinutes,
+  TIME_SNAP_MINUTES,
   TYPE_LABEL,
   typeBlockStyle,
   weekdayLabel,
@@ -79,7 +81,7 @@ export function DayColumn({
     const hour = startHour + ratio * hours;
     const t = new Date(day);
     const hh = Math.floor(hour);
-    const mm = Math.round(((hour - hh) * 60) / 15) * 15;
+    const mm = Math.round(((hour - hh) * 60) / TIME_SNAP_MINUTES) * TIME_SNAP_MINUTES;
     t.setHours(hh, mm, 0, 0);
     if (mm === 60) {
       t.setHours(hh + 1, 0, 0, 0);
@@ -288,8 +290,12 @@ function EventChip({
   onView: () => void;
   onShift: (deltaMin: number) => void;
 }) {
-  const { live, previewMin, bind } = useBlockDrag(pxPerMinute, onView, onShift, (dy) =>
-    dragOffsetPx(slice.event, dy, pxPerMinute, day),
+  const { live, previewMin, bind } = useBlockDrag(
+    pxPerMinute,
+    onView,
+    onShift,
+    (dy) => dragOffsetPx(slice.event, dy, pxPerMinute, day),
+    (raw) => snapDeltaMinutes(slice.event.start, raw),
   );
   const moved = shiftEvent(slice.event, previewMin, day);
   const timeLabel = `${formatHM(new Date(moved.start))}–${formatHM(new Date(moved.end))}`;
@@ -392,8 +398,12 @@ function AxisPin({
   onView: () => void;
   onShift: (deltaMin: number) => void;
 }) {
-  const { live, previewMin, bind } = useBlockDrag(pxPerMinute, onView, onShift, (dy) =>
-    dragOffsetPx(event, dy, pxPerMinute, day),
+  const { live, previewMin, bind } = useBlockDrag(
+    pxPerMinute,
+    onView,
+    onShift,
+    (dy) => dragOffsetPx(event, dy, pxPerMinute, day),
+    (raw) => snapDeltaMinutes(event.start, raw),
   );
   const moved = shiftEvent(event, previewMin, day);
   const at = pinAt(moved);

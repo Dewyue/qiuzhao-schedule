@@ -125,7 +125,7 @@ export function shiftEvent(event: RecruitEvent, deltaMin: number, day: Date): Re
   let next = startMs + deltaMin * 60_000;
   if (next < day0) next = day0;
   if (dur < day1 - day0 && next + dur > day1) next = day1 - dur;
-  if (dur >= day1 - day0 && next >= day1) next = day1 - 15 * 60_000;
+  if (dur >= day1 - day0 && next >= day1) next = day1 - TIME_SNAP_MINUTES * 60_000;
   if (next === startMs) return event;
   const moved = next - startMs;
   const shifted: RecruitEvent = {
@@ -527,16 +527,31 @@ export function longestFree(slots: FreeSlot[]): FreeSlot | null {
   return slots.reduce((a, b) => (a.minutes >= b.minutes ? a : b));
 }
 
+/** Drag / blank-tap snap grid: :00 :10 :20 :30 :40 :50. */
+export const TIME_SNAP_MINUTES = 10;
+
+export function snapToTen(d: Date): Date {
+  const day0 = startOfDay(d).getTime();
+  const minsFromDay =
+    (d.getTime() - day0) / 60_000;
+  let snapped = Math.round(minsFromDay / TIME_SNAP_MINUTES) * TIME_SNAP_MINUTES;
+  if (snapped < 0) snapped = 0;
+  if (snapped >= 24 * 60) snapped = 24 * 60 - TIME_SNAP_MINUTES;
+  return new Date(day0 + snapped * 60_000);
+}
+
+/** @deprecated alias — prefer snapToTen */
 export function snapToQuarter(d: Date): Date {
-  const x = new Date(d);
-  const m = x.getMinutes();
-  const snapped = Math.round(m / 15) * 15;
-  x.setMinutes(snapped, 0, 0);
-  if (snapped === 60) {
-    x.setHours(x.getHours() + 1);
-    x.setMinutes(0);
-  }
-  return x;
+  return snapToTen(d);
+}
+
+/** Minute delta so start + delta lands on the 10-minute grid. */
+export function snapDeltaMinutes(startIso: string, deltaMin: number): number {
+  const start = new Date(startIso);
+  if (Number.isNaN(start.getTime())) return deltaMin;
+  const tentative = new Date(start.getTime() + deltaMin * 60_000);
+  const snapped = snapToTen(tentative);
+  return Math.round((snapped.getTime() - start.getTime()) / 60_000);
 }
 
 export function yToTime(
@@ -552,5 +567,5 @@ export function yToTime(
   const h = Math.floor(hours);
   const m = (hours - h) * 60;
   t.setHours(h, m, 0, 0);
-  return snapToQuarter(t);
+  return snapToTen(t);
 }
