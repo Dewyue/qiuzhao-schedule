@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { BottomNav, type Tab } from "./components/BottomNav";
 import { DataPanel } from "./components/DataPanel";
 import { DayDetailList } from "./components/DayDetailList";
@@ -11,6 +11,7 @@ import {
   dismissDemoNotice,
   hasDemoEvents,
 } from "./lib/demo";
+import { useSwipeRange } from "./lib/swipeRange";
 import { addDays, DEFAULT_START_HOUR, startOfDay } from "./lib/time";
 import { useEvents } from "./state/EventsContext";
 import type { FreeSlot, RangeMode, RecruitEvent } from "./types";
@@ -26,6 +27,16 @@ export default function App() {
   const [viewing, setViewing] = useState<RecruitEvent | null>(null);
   const showingDemo = hasDemoEvents(events);
   const [demoOpen, setDemoOpen] = useState(() => !demoNoticeDismissed());
+  const scheduleRef = useRef<HTMLDivElement>(null);
+
+  function applyMode(next: RangeMode) {
+    setMode(next);
+    const today = startOfDay(new Date());
+    if (next === "today") setSelectedDay(today);
+    if (next === "tomorrow") setSelectedDay(addDays(today, 1));
+  }
+
+  useSwipeRange(scheduleRef, mode, applyMode, tab === "schedule");
 
   function defaultDraft(start?: Date): Omit<RecruitEvent, "id"> {
     const s = start ?? snapNextHour();
@@ -93,7 +104,7 @@ export default function App() {
         }
       >
         {tab === "schedule" ? (
-          <>
+          <div ref={scheduleRef} className="flex flex-col gap-3">
             <header className="flex items-center justify-between gap-3">
               <div className="min-w-0">
                 <h1 className="text-[18px] font-semibold tracking-[-0.03em]">秋招日程</h1>
@@ -101,15 +112,7 @@ export default function App() {
                   <p className="mt-0.5 text-[12px] text-muted">演示数据 · 记下自己的一场后会清掉</p>
                 ) : null}
               </div>
-              <RangeSwitch
-                value={mode}
-                onChange={(next) => {
-                  setMode(next);
-                  const today = startOfDay(new Date());
-                  if (next === "today") setSelectedDay(today);
-                  if (next === "tomorrow") setSelectedDay(addDays(today, 1));
-                }}
-              />
+              <RangeSwitch value={mode} onChange={applyMode} />
             </header>
             <RangeSummary events={events} mode={mode} now={now} />
             {mode === "today" || mode === "tomorrow" ? (
@@ -132,7 +135,7 @@ export default function App() {
               onSelectFree={onSelectFree}
               onPickTime={onPickTime}
             />
-          </>
+          </div>
         ) : null}
 
         {tab === "record" ? (

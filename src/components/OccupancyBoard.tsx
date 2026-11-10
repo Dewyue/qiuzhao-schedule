@@ -77,6 +77,7 @@ export function OccupancyBoard({
         ))}
       </div>
       <div
+        data-week-scroll={week ? "" : undefined}
         className={`min-w-0 flex-1 ${
           week
             ? "overflow-x-auto overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
