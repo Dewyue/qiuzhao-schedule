@@ -1,17 +1,17 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { BottomNav, type Tab } from "./components/BottomNav";
 import { DataPanel } from "./components/DataPanel";
 import { DayDetailList } from "./components/DayDetailList";
 import { DemoNotice, EventDetail } from "./components/EventDialogs";
 import { EventForm } from "./components/EventForm";
 import { OccupancyBoard, RangeSummary } from "./components/OccupancyBoard";
+import { RangePager } from "./components/RangePager";
 import { RangeSwitch } from "./components/RangeSwitch";
 import {
   demoNoticeDismissed,
   dismissDemoNotice,
   hasDemoEvents,
 } from "./lib/demo";
-import { useSwipeRange } from "./lib/swipeRange";
 import { addDays, DEFAULT_START_HOUR, startOfDay } from "./lib/time";
 import { useEvents } from "./state/EventsContext";
 import type { FreeSlot, RangeMode, RecruitEvent } from "./types";
@@ -27,16 +27,14 @@ export default function App() {
   const [viewing, setViewing] = useState<RecruitEvent | null>(null);
   const showingDemo = hasDemoEvents(events);
   const [demoOpen, setDemoOpen] = useState(() => !demoNoticeDismissed());
-  const scheduleRef = useRef<HTMLDivElement>(null);
+  const today = useMemo(() => startOfDay(now), [now]);
+  const tomorrow = useMemo(() => addDays(today, 1), [today]);
 
   function applyMode(next: RangeMode) {
     setMode(next);
-    const today = startOfDay(new Date());
     if (next === "today") setSelectedDay(today);
-    if (next === "tomorrow") setSelectedDay(addDays(today, 1));
+    if (next === "tomorrow") setSelectedDay(tomorrow);
   }
-
-  useSwipeRange(scheduleRef, mode, applyMode, tab === "schedule");
 
   function defaultDraft(start?: Date): Omit<RecruitEvent, "id"> {
     const s = start ?? snapNextHour();
@@ -104,7 +102,7 @@ export default function App() {
         }
       >
         {tab === "schedule" ? (
-          <div ref={scheduleRef} className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3">
             <header className="flex items-center justify-between gap-3">
               <div className="min-w-0">
                 <h1 className="text-[18px] font-semibold tracking-[-0.03em]">秋招日程</h1>
@@ -114,27 +112,31 @@ export default function App() {
               </div>
               <RangeSwitch value={mode} onChange={applyMode} />
             </header>
-            <RangeSummary events={events} mode={mode} now={now} />
-            {mode === "today" || mode === "tomorrow" ? (
-              <div>
-                <p className="mb-2 text-[13px] font-medium text-muted">当日列表</p>
-                <DayDetailList
+            <RangePager mode={mode} onChange={applyMode} renderPage={(page) => (
+              <div className="flex flex-col gap-3">
+                <RangeSummary events={events} mode={page} now={now} />
+                {page === "today" || page === "tomorrow" ? (
+                  <div>
+                    <p className="mb-2 text-[13px] font-medium text-muted">当日列表</p>
+                    <DayDetailList
+                      events={events}
+                      day={page === "today" ? today : tomorrow}
+                      onView={onViewEvent}
+                    />
+                  </div>
+                ) : null}
+                <OccupancyBoard
                   events={events}
-                  day={selectedDay}
-                  onView={onViewEvent}
+                  mode={page}
+                  now={now}
+                  selectedDay={page === "today" ? today : page === "tomorrow" ? tomorrow : selectedDay}
+                  onViewEvent={onViewEvent}
+                  onShiftEvent={onShiftEvent}
+                  onSelectFree={onSelectFree}
+                  onPickTime={onPickTime}
                 />
               </div>
-            ) : null}
-            <OccupancyBoard
-              events={events}
-              mode={mode}
-              now={now}
-              selectedDay={selectedDay}
-              onViewEvent={onViewEvent}
-              onShiftEvent={onShiftEvent}
-              onSelectFree={onSelectFree}
-              onPickTime={onPickTime}
-            />
+            )} />
           </div>
         ) : null}
 
